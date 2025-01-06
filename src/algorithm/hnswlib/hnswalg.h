@@ -37,6 +37,122 @@
 #include "hnswlib.h"
 #include "visited_list_pool.h"
 #include "../../simd/simd.h"
+#include "space_ip.h"
+
+#include <iostream>
+#include <vector>
+#include <random>
+#include <cmath>
+#include <cstring> // for memcpy
+#include <cblas.h>
+#include <lapacke.h>
+
+class RandomOrthogonalMatrix {
+public:
+    // 构造函数，生成 d 维的随机正交矩阵
+    RandomOrthogonalMatrix(int d) : dimension(d), orthogonal_matrix(d * d, 0.0) {
+        generateRandomOrthogonalMatrix();
+    }
+
+    // 对输入的 d 维向量进行变换
+    void transform(float* vec) const {
+        // OpenBLAS 和 LAPACK 使用的是双精度，所以需要将 float 转换为 double
+        std::vector<double> vec_double(dimension);
+        for(int i = 0; i < dimension; ++i){
+            vec_double[i] = static_cast<double>(vec[i]);
+        }
+
+        // Perform matrix-vector multiplication: y = Q * x
+        std::vector<double> result(dimension, 0.0);
+        cblas_dgemv(CblasRowMajor, CblasNoTrans, dimension, dimension, 1.0,
+                    orthogonal_matrix.data(), dimension, vec_double.data(), 1, 0.0, result.data(), 1);
+
+        // 将结果转换回 float 并存储回原数组
+        for(int i = 0; i < dimension; ++i){
+            vec[i] = static_cast<float>(result[i]);
+        }
+    }
+
+    // 打印正交矩阵
+    void printMatrix() const {
+        for(int i = 0; i < dimension; ++i){
+            for(int j = 0; j < dimension; ++j){
+                std::cout << orthogonal_matrix[i * dimension + j] << " ";
+            }
+            std::cout << std::endl;
+        }
+    }
+
+private:
+    int dimension;
+    std::vector<double> orthogonal_matrix; // 使用双精度以兼容 LAPACK
+
+    // 生成随机正交矩阵的方法
+    void generateRandomOrthogonalMatrix() {
+        // 生成随机矩阵，元素服从标准正态分布
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::normal_distribution<double> dist(0.0, 1.0);
+
+        for(int i = 0; i < dimension * dimension; ++i){
+            orthogonal_matrix[i] = dist(gen);
+        }
+
+        // 使用 LAPACK 进行 QR 分解
+        std::vector<double> tau(dimension, 0.0);
+        int lda = dimension;
+        int info;
+
+        // QR 分解
+        info = LAPACKE_dgeqrf(LAPACK_ROW_MAJOR, dimension, dimension, orthogonal_matrix.data(), lda, tau.data());
+        if(info != 0){
+            std::cerr << "Error in dgeqrf: " << info << std::endl;
+            exit(1);
+        }
+
+        // 生成 Q 矩阵
+        info = LAPACKE_dorgqr(LAPACK_ROW_MAJOR, dimension, dimension, dimension, orthogonal_matrix.data(), lda, tau.data());
+        if(info != 0){
+            std::cerr << "Error in dorgqr: " << info << std::endl;
+            exit(1);
+        }
+
+        // 确保矩阵的行列式为 +1（避免反射）
+        double det = computeDeterminant();
+        if(det < 0){
+            // 反转第一列
+            for(int i = 0; i < dimension; ++i){
+                orthogonal_matrix[i * dimension] = -orthogonal_matrix[i * dimension];
+            }
+        }
+    }
+
+    // 计算矩阵的行列式
+    double computeDeterminant() const {
+        // 使用 LU 分解计算行列式
+        std::vector<double> mat = orthogonal_matrix; // 复制矩阵
+        std::vector<int> ipiv(dimension);
+        int info = LAPACKE_dgetrf(LAPACK_ROW_MAJOR, dimension, dimension, mat.data(), dimension, ipiv.data());
+        if(info != 0){
+            std::cerr << "Error in dgetrf: " << info << std::endl;
+            exit(1);
+        }
+
+        double det = 1.0;
+        int num_swaps = 0;
+        for(int i = 0; i < dimension; ++i){
+            det *= mat[i * dimension + i];
+            if(ipiv[i] != i + 1){
+                num_swaps++;
+            }
+        }
+        if(num_swaps % 2 != 0){
+            det = -det;
+        }
+        return det;
+    }
+};
+
 
 namespace vsag {
 extern int32_t (*INT4_IP)(const void* p1_vec, const void* p2_vec, int dim);
@@ -119,6 +235,8 @@ private:
     std::mutex deleted_elements_lock;               // lock for deleted_elements
     std::unordered_set<tableint> deleted_elements;  // contains internal ids of deleted elements
 
+    std::shared_ptr<RandomOrthogonalMatrix> rom_;
+
     float alpha_;
     uint32_t po_;
     uint32_t pl_;
@@ -128,6 +246,13 @@ private:
     uint64_t* offset_code_;
     float redundant_rate_;
     mutable uint8_t* to_be_prefetch_;
+    std::vector<float> error_sq_;
+    std::vector<int64_t> base_norm_sq_;
+    std::vector<float> base_norm_raws_;
+    std::vector<float> base_sum_raws_;
+    bool use_normalize_{true};
+    bool use_rp_{true};
+    bool use_rerank_{true};
 
 public:
     HierarchicalNSW(SpaceInterface* s) {
@@ -223,6 +348,8 @@ public:
         size_links_per_element_ = maxM_ * sizeof(tableint) + sizeof(linklistsizeint);
         mult_ = 1 / log(1.0 * M_);
         revSize_ = 1.0 / mult_;
+
+        rom_ = std::make_shared<RandomOrthogonalMatrix>(*(size_t*)dist_func_param_);
     }
 
     ~HierarchicalNSW() {
@@ -265,8 +392,10 @@ public:
                 max_ = std::max(max_, data[d]);
             }
         }
-        if (dim == 960) {
-            max_ = 0.3;
+        if (not use_normalize_) {
+            if (dim == 960) {
+                max_ = 0.3;
+            }
         }
     }
 
@@ -314,6 +443,29 @@ public:
         return redundant_data_int8.get() + offset_code_[internal_id];
     }
 
+    inline float
+    compute_error_origin_data_code(const float* query, const int8_t* codes) const {
+        size_t dim = *(size_t*)dist_func_param_;
+        float result = 0;
+        float x_lo = 0, x_hi = 0, y_lo = 0, y_hi = 0;
+
+        for (uint64_t d = 0; d < dim; d += 2) {
+            x_lo = query[d];
+            y_lo = (codes[d >> 1] & 0x0f) / 16.0 * (max_ - min_) + min_;
+            if (d + 1 < dim) {
+                x_hi = query[d + 1];
+                y_hi = (((codes[d >> 1] & 0xf0) >> 4) & 0x0f) / 16.0 * (max_ - min_) + min_;
+            } else {
+                x_hi = 0;
+                y_hi = 0;
+            }
+
+            result += (x_lo * y_lo) + (x_hi * y_hi);
+        }
+
+        return result;
+    }
+
     void
     transform_to_int4(const float* from, int8_t* to) const override {
         size_t dim = *(size_t*)dist_func_param_;
@@ -337,21 +489,99 @@ public:
         }
     }
 
+    inline void transform_to_binary(const float* from, int8_t* to) const {
+        size_t dim = *(size_t*)dist_func_param_;
+
+        for (std::size_t d = 0; d < dim; ++d) {
+            if (from[d] >= 0.0f) {
+                to[d / 8] |= (1 << (d % 8));
+            }
+        }
+    }
+
+    inline float Binary_IP(const float* vector, const int8_t* bits) const {
+        size_t dim = *(size_t*)dist_func_param_;
+        float inv_sqrt_d = 1.0f / std::sqrt(static_cast<float>(dim));
+        float ip = 0.0f;
+
+        for (std::size_t d = 0; d < dim; ++d) {
+            bool bit = ((bits[d / 8] >> (d % 8)) & 1) != 0;
+            float b_i = bit ? inv_sqrt_d : -inv_sqrt_d;
+            ip += b_i * vector[d];
+        }
+
+        return ip;
+    }
+
+    inline std::pair<float, float> normalize(float* data_point, uint64_t dim) const {
+        InnerProductSpace space(dim);
+        DISTFUNC IP_DISTANCE = space.get_dist_func();
+
+//        if (dim == 960) {
+//            for (int d = 0; d < dim; d++) {
+//                if (data_point[d] > 0.3) {
+//                    data_point[d] = 0.3;
+//                }
+//            }
+//        }
+
+        float sum = 0;
+        float norm_sqr = 1.0f - IP_DISTANCE(data_point, data_point, dist_func_param_);
+        bool validate_norm = true;
+        if (validate_norm){
+            float norm_sqr_validate = 0;
+            for (int d = 0; d < dim; d++) {
+                norm_sqr_validate += data_point[d] * data_point[d];
+                sum += data_point[d];
+            }
+            assert(abs(norm_sqr_validate - norm_sqr) < 1e-3);
+        }
+        assert(norm_sqr >= 0);
+
+        float norm = 0;
+        if (norm_sqr == 0) {
+            norm = 1;
+        } else {
+            norm = std::sqrt(norm_sqr);
+        }
+
+        for (int d = 0; d < dim; d++) {
+            data_point[d] = data_point[d] / norm;
+        }
+
+        return {norm, sum};
+    }
+
     void
     transform_base_int4() override {
-        compute_sq_interval();
         size_t dim = *(size_t*)dist_func_param_;
         size_t code_size = 0;
         if (sq_num_bits_ == 4) {
             code_size = dim / 2;
         } else if (sq_num_bits_ == 8) {
             code_size = dim;
+        } else if (sq_num_bits_ == 1) {
+            code_size = (dim + 7) / 8;
         }
-#ifdef ENABLE_AVX512
-        vsag::logger::info("using SIMD");
-#else
-        vsag::logger::info("not using SIMD");
-#endif
+
+        // transform
+        if (use_rp_) {
+            for (uint64_t i = 0; i < cur_element_count_; ++i) {
+                rom_->transform((float*)getDataByInternalId(i));  // random projection
+            }
+        }
+
+        // normalize
+        if (use_normalize_) {
+            base_norm_raws_.resize(cur_element_count_, 1);
+            base_sum_raws_.resize(cur_element_count_, 1);
+            for (uint64_t i = 0; i < cur_element_count_; ++i) {
+                std::tie(base_norm_raws_[i], base_sum_raws_[i]) = normalize((float*)getDataByInternalId(i), dim);  // update raw vec
+            }
+        }
+
+        // sq training
+        compute_sq_interval();
 
         struct AlignedDeleter {
             void
@@ -389,15 +619,25 @@ public:
         std::memset(ptr, 0, sz_close);
         data_int8 = std::shared_ptr<int8_t[]>(static_cast<int8_t*>(ptr), AlignedDeleter());
         size_t dim_sz = dim;
+        error_sq_.resize(cur_element_count_, 1);
+        base_norm_sq_.resize(cur_element_count_, 1);
         for (uint64_t i = 0; i < cur_element_count_; ++i) {  // note here mixed
             int64_t norm = 0;
             auto* code = get_encoded_data(i, code_size_aligned_);
+
             if (sq_num_bits_ == 4) {
                 transform_to_int4((float*)getDataByInternalId(i), code);
                 norm = vsag::INT4_IP(code, code, dim);
+                float error = compute_error_origin_data_code((float*)getDataByInternalId(i), code);
+                error_sq_[i] = error;
+                base_norm_sq_[i] = norm;
             } else if (sq_num_bits_ == 8){
                 transform_to_int8((float*)getDataByInternalId(i), code);
                 norm = vsag::INT8_IP(code, code, dim);
+            } else if (sq_num_bits_ == 1){
+                transform_to_binary((float*)getDataByInternalId(i), code);
+                float error = Binary_IP((float*)getDataByInternalId(i), code);
+                error_sq_[i] = error;
             }
             memcpy(code + code_size, &norm, 8);
         }
@@ -758,6 +998,7 @@ public:
 
     void
     optimize() override {
+        return ;
         constexpr static size_t sample_points_num = 1000;
         constexpr static size_t k = 10;
         size_t dim = *(size_t*)dist_func_param_;
@@ -1048,6 +1289,102 @@ public:
         return count_no_visited;
     }
 
+
+    inline float
+    decode_IP(float sum1, float sum2, float lower_bound_, float delta, int32_t sq_ip) const {
+        return lower_bound_ * (sum1 + sum2) + delta * delta * sq_ip - lower_bound_ * lower_bound_;
+    }
+
+    inline float
+    decode_IP_half(float sum, float lower_bound_, float delta, int32_t sq_ip) const {
+        return lower_bound_ * sum + delta * sq_ip;
+    }
+
+    inline float
+    L2_UBE(float norm_base_raw, float norm_query_raw, float est_ip_norm) const {
+        float p1 = norm_base_raw * norm_base_raw;
+        float p2 = norm_query_raw * norm_query_raw;
+        float p3 = -2 * norm_base_raw * norm_query_raw * est_ip_norm;
+        float ret = p1 + p2 + p3;
+        return ret;
+    }
+
+    inline float
+    L2_UBE_id2query(uint32_t id, const void* sq_base, const void* sq_query, const void* query,
+                    float query_norm_raw, float query_sum) const {
+        int dim = *(size_t*)dist_func_param_;
+
+        float lb = min_;
+        float delta = ((max_ - min_) / 16.0);
+
+        int sq_ip = vsag::INT4_IP(sq_base, sq_query, dim);
+        float est_ip_bq = decode_IP(base_sum_raws_[id], query_sum, lb, delta, sq_ip);
+
+        float ip_bq_4_32 = compute_error_origin_data_code((float*)query, (int8_t*)sq_base);
+        float ip_bb_4_32 = error_sq_[id];
+
+        InnerProductSpace space(dim);
+        DISTFUNC IP_DISTANCE = space.get_dist_func();
+        float ip_norm = 1.0 - IP_DISTANCE(query, getDataByInternalId(id), dist_func_param_);
+        float ip_norm_432_432 = ip_bq_4_32 / ip_bb_4_32;
+        float ip_norm_4_4 = sq_ip / (base_norm_sq_[id] * 1.0);
+        float ip_norm_4d_432 = est_ip_bq / ip_bb_4_32;
+
+        float ret = L2_UBE(base_norm_raws_[id], query_norm_raw, ip_norm_432_432);
+        return ret;
+    }
+
+    inline float
+    L2_BQ_UBE_id2query(uint32_t id, const void* bq_base,
+                       const void* query, float query_norm_raw) const {
+        int dim = *(size_t*)dist_func_param_;
+        InnerProductSpace space(dim);
+        DISTFUNC IP_DISTANCE = space.get_dist_func();
+        float ip_norm = 1.0 - IP_DISTANCE(query, getDataByInternalId(id), dist_func_param_);
+
+        float ip_bq_1_32 = Binary_IP((float*)query, (int8_t*)bq_base);
+        float ip_bb_1_32 = error_sq_[id];
+        float ip_est = ip_bq_1_32 / ip_bb_1_32;
+
+        float ret = L2_UBE(base_norm_raws_[id], query_norm_raw, ip_est);
+        return ret;
+    }
+
+    inline float
+    L2_norm_to_raw(uint32_t id, const void* query, float query_norm_raw) const {
+        int dim = *(size_t*)dist_func_param_;
+        InnerProductSpace space(dim);
+        DISTFUNC IP_DISTANCE = space.get_dist_func();
+
+        float ip_norm = 1 - IP_DISTANCE(query, getDataByInternalId(id), dist_func_param_);
+
+        float l2_raw = L2_UBE(base_norm_raws_[id], query_norm_raw, ip_norm);
+
+        {
+            if (l2_raw < 0) {
+                std::cout << "";
+            }
+
+            float l2_norm_valid = 2 - 2 * ip_norm;
+            float l2_norm = fstdistfunc_(query, getDataByInternalId(id), dist_func_param_);
+
+            if (abs(l2_norm_valid - l2_norm) > 1e-3) {
+                std::cout << "";
+            }
+
+            float dist_valid = base_norm_raws_[id] * base_norm_raws_[id]
+                               + query_norm_raw * query_norm_raw
+                               - (2 - l2_norm) * query_norm_raw * base_norm_raws_[id];
+            float dist_valid2 = base_norm_raws_[id] * base_norm_raws_[id]
+                                + query_norm_raw * query_norm_raw
+                                - (2 - l2_norm_valid) * query_norm_raw * base_norm_raws_[id];
+            if (abs(l2_raw - dist_valid) > 1e-3) {
+                std::cout << "";
+            }
+        }
+        return l2_raw;
+    }
+
     template <bool has_deletions, bool collect_metrics = false>
     std::pair<std::priority_queue<std::pair<float, tableint>,
                                   std::vector<std::pair<float, tableint>>,
@@ -1056,7 +1393,9 @@ public:
     searchBaseLayerST(tableint ep_id,
                       const void* data_point,
                       size_t ef,
-                      BaseFilterFunctor* isIdAllowed = nullptr) const {
+                      BaseFilterFunctor* isIdAllowed = nullptr,
+                      float query_norm_raw = 1,
+                      float query_sum_raw = 1) const {
         VisitedList* vl = visited_list_pool_->getFreeVisitedList();
         vl_type* visited_array = vl->mass;
         vl_type visited_array_tag = vl->curV;
@@ -1080,7 +1419,10 @@ public:
             code_size = dim;
         } else if (sq_num_bits_ == 4) {
             code_size = dim / 2;
+        } else if (sq_num_bits_ == 1) {
+            code_size = (dim + 7) / 8;
         }
+
         if (sq_num_bits_ == 8) {
             query_int8.reset(new int8_t[code_size]);
             transform_to_int8((const float*)data_point, query_int8.get());
@@ -1100,11 +1442,20 @@ public:
         float curdist = 0;
 
         if (sq_num_bits_ == 4) {
-            curdist = vsag::INT4_L2_precompute(
-                *((int64_t*)(codes_top + code_size)), norm2, codes_top, transformed_query, dim);
+            if (not use_normalize_) {
+                curdist = vsag::INT4_L2_precompute(
+                    *((int64_t*)(codes_top + code_size)), norm2, codes_top, transformed_query, dim);
+            } else {
+                curdist = L2_UBE_id2query(ep_id, codes_top, transformed_query, data_point,
+                                          query_norm_raw, query_sum_raw);
+//                curdist = L2_norm_to_raw(ep_id, data_point, query_norm_raw);
+            }
         } else if (sq_num_bits_ == 8) {
             curdist = vsag::INT8_L2_precompute(
                 *((int64_t*)(codes_top + code_size)), norm2, codes_top, transformed_query, dim);
+        } else if (sq_num_bits_ == 1) {
+            curdist = L2_BQ_UBE_id2query(ep_id, codes_top,
+                                         data_point, query_norm_raw);
         } else {
             curdist = fstdistfunc_(data_point, getDataByInternalId(ep_id), dist_func_param_);
         }
@@ -1125,14 +1476,14 @@ public:
 
                 tableint* datal = (tableint*)(data + 1);
 
-                if (sq_num_bits_ == 4 or sq_num_bits_ == 8) {
+                if (sq_num_bits_ != -1) {
                     for (int i = 0; i < po_; i++) {
                         mem_prefetch((uint8_t*)get_encoded_data(datal[i], code_size_aligned_), this->pl_);
                     }
                 }
 
                 for (int i = 0; i < size; i++) {
-                    if (sq_num_bits_ == 4 or sq_num_bits_ == 8) {
+                    if (sq_num_bits_ != -1) {
                         if (i + po_ < size) {
                             mem_prefetch((uint8_t*)get_encoded_data(datal[i + po_], code_size_aligned_), this->pl_);
                         }
@@ -1144,11 +1495,18 @@ public:
                     float d = 0;
                     if (sq_num_bits_ == 4) {
                         codes_top = get_encoded_data(cand, code_size_aligned_);
-                        d = vsag::INT4_L2_precompute(*((int64_t*)(codes_top + code_size)),
-                                                     norm2,
-                                                     codes_top,
-                                                     transformed_query,
-                                                     dim);
+                        if (not use_normalize_) {
+                            d = vsag::INT4_L2_precompute(*((int64_t*)(codes_top + code_size)),
+                                                         norm2,
+                                                         codes_top,
+                                                         transformed_query,
+                                                         dim);
+                        } else {
+                            d = L2_UBE_id2query(cand, codes_top, transformed_query, data_point,
+                                                query_norm_raw, query_sum_raw);
+//                            d = L2_norm_to_raw(cand, data_point, query_norm_raw);
+                        }
+
                     } else if (sq_num_bits_ == 8) {
                         codes_top = get_encoded_data(cand, code_size_aligned_);
                         d = vsag::INT8_L2_precompute(*((int64_t*)(codes_top + code_size)),
@@ -1156,6 +1514,10 @@ public:
                                                codes_top,
                                                transformed_query,
                                                dim);
+                    } else if (sq_num_bits_ == 1) {
+                        codes_top = get_encoded_data(cand, code_size_aligned_);
+                        d = L2_BQ_UBE_id2query(cand, codes_top,
+                                               data_point, query_norm_raw);
                     } else {
                         d = fstdistfunc_(data_point, getDataByInternalId(cand), dist_func_param_);
                     }
@@ -1198,6 +1560,9 @@ public:
             std::pair<float, tableint> next_node_pair = candidate_set.top();
 
             if (current_node_pair.second >= cut_num_) {
+                // ***********************************
+                // non-redundant
+                // ***********************************
                 uint32_t count_no_visited = visit_naive(current_node_pair,
                                                         next_node_pair,
                                                         visited_array,
@@ -1205,7 +1570,7 @@ public:
                                                         to_be_visited);
                 dist_cmp += count_no_visited;
 
-                if (sq_num_bits_ == 4 or sq_num_bits_ == 8) {
+                if (sq_num_bits_ != -1) {
                     for (size_t j = 0; j < this->po_; j++) {
                         vector_data_ptr =
                             (uint8_t*)get_encoded_data(to_be_visited[j], code_size_aligned_);
@@ -1220,7 +1585,7 @@ public:
                 for (size_t j = 0; j < count_no_visited; j++) {
                     int candidate_id = to_be_visited[j];
 
-                    if (sq_num_bits_ == 4 or sq_num_bits_ == 8) {
+                    if (sq_num_bits_ != -1) {
                         if (j + this->po_ < count_no_visited) {
                             vector_data_ptr =
                                 (uint8_t*)get_encoded_data(to_be_visited[j + this->po_], code_size_aligned_);
@@ -1229,11 +1594,21 @@ public:
 
                         auto* codes = get_encoded_data(candidate_id, code_size_aligned_);
                         if (sq_num_bits_ == 4) {
-                            dist = vsag::INT4_L2_precompute(
-                                *((int64_t*)(codes + code_size)), norm2, codes, transformed_query, dim);
-                        } else {
+                            if (not use_normalize_) {
+                                dist = vsag::INT4_L2_precompute(
+                                    *((int64_t*)(codes + code_size)), norm2, codes, transformed_query, dim);
+                            } else {
+                                dist = L2_UBE_id2query(candidate_id, codes, transformed_query, data_point,
+                                                       query_norm_raw, query_sum_raw);
+//                                dist = L2_norm_to_raw(candidate_id, data_point, query_norm_raw);
+                            }
+
+                        } else if (sq_num_bits_ == 8) {
                             dist = vsag::INT8_L2_precompute(
                                 *((int64_t*)(codes + code_size)), norm2, codes, transformed_query, dim);
+                        } else if (sq_num_bits_ == 1) {
+                            dist = L2_BQ_UBE_id2query(candidate_id, codes,
+                                                      data_point, query_norm_raw);
                         }
 
                         if (j + this->po_ < count_no_visited) {
@@ -1262,6 +1637,9 @@ public:
                     }
                 }
             } else {
+                // ***********************************
+                // redundant
+                // ***********************************
                 uint32_t count_no_visited = visit_redundant(current_node_pair,
                                                             next_node_pair,
                                                             visited_array,
@@ -1283,12 +1661,19 @@ public:
                     }
                     to_be_prefetch_ = nullptr;
                     if (sq_num_bits_ == 4) {
-                        dist = vsag::INT4_L2_precompute(
-                            *((int64_t*)(code + to_be_visited[j] * (code_size_aligned_) + code_size)),
-                            norm2,
-                            code + to_be_visited[j] * (code_size_aligned_),
-                            transformed_query,
-                            dim);
+                        if (not use_normalize_) {
+                            dist = vsag::INT4_L2_precompute(
+                                *((int64_t*)(code + to_be_visited[j] * (code_size_aligned_) + code_size)),
+                                norm2,
+                                code + to_be_visited[j] * (code_size_aligned_),
+                                transformed_query,
+                                dim);
+                        } else {
+                            uint64_t candidate_id = *(int64_t*)(code + j * (code_size_aligned_) + code_size + 8);
+                            dist = L2_UBE_id2query(candidate_id, code + to_be_visited[j] * (code_size_aligned_), transformed_query,
+                                                   data_point, query_norm_raw, query_sum_raw);
+//                            dist = L2_norm_to_raw(candidate_id, data_point, query_norm_raw);
+                        }
                     } else if (sq_num_bits_ == 8) {
                         dist = vsag::INT8_L2_precompute(
                             *((int64_t*)(code + to_be_visited[j] * (code_size_aligned_) + code_size)),
@@ -1296,6 +1681,10 @@ public:
                             code + to_be_visited[j] * (code_size_aligned_),
                             transformed_query,
                             dim);
+                    } else if (sq_num_bits_ == 1) {
+                        uint64_t candidate_id = *(int64_t*)(code + j * (code_size_aligned_) + code_size + 8);
+                        L2_BQ_UBE_id2query(candidate_id, code + to_be_visited[j] * (code_size_aligned_),
+                                           data_point, query_norm_raw);
                     }
 
                     if (top_candidates.size() < ef || lowerBound > dist) {
@@ -2657,44 +3046,53 @@ public:
                             CompareByFirst>
             top_candidates;
         std::pair<uint32_t, uint32_t> counts;
-        if (num_deleted_) {
-            std::tie(top_candidates, counts) =
-                searchBaseLayerST<true, true>(enterpoint_node_, query_data, std::max(ef_, k), isIdAllowed);
-        } else {
-            std::tie(top_candidates, counts) = searchBaseLayerST<false, true>(
-                enterpoint_node_, query_data, std::max(ef_, k), isIdAllowed);
+
+        size_t dim = *(size_t*)dist_func_param_;
+        float* query_norm_data = new float[dim];
+        memcpy(query_norm_data, (float*)query_data, data_size_);
+        float query_norm_raw = 1;
+        float query_sum_raw = 1;
+        if (use_rp_) {
+            rom_->transform(query_norm_data);
+            std::tie(query_norm_raw, query_sum_raw) = normalize(query_norm_data, dim);
         }
 
-        while (ef_ >= 50 and top_candidates.size() > ef_ / 2) {
-            top_candidates.pop();
+        if (num_deleted_) {
+            std::tie(top_candidates, counts) =
+                searchBaseLayerST<true, true>(enterpoint_node_, query_norm_data, std::max(ef_, k), isIdAllowed,
+                                              query_norm_raw, query_sum_raw);
+        } else {
+            std::tie(top_candidates, counts) = searchBaseLayerST<false, true>(
+                enterpoint_node_, query_norm_data, std::max(ef_, k), isIdAllowed,
+                query_norm_raw, query_sum_raw);
         }
 
         float dist = 0;
-
-        if (ef_ <= 20) {
-            while (top_candidates.size() > 0) {
-                std::pair<float, tableint> rez = top_candidates.top();
+        while (top_candidates.size() > 0) {
+            std::pair<float, tableint> rez = top_candidates.top();
+            if (use_rerank_) {
+                float dist_n = fstdistfunc_((void*)query_norm_data, getDataByInternalId(rez.second), dist_func_param_);
+                if (not use_normalize_) {
+                    dist = dist_n;
+                } else {
+                    dist = base_norm_raws_[rez.second] * base_norm_raws_[rez.second]
+                           + query_norm_raw * query_norm_raw
+                           - (2 - dist_n) * query_norm_raw * base_norm_raws_[rez.second];
+                }
+            } else {
                 dist = rez.first;
-                result.push(std::pair<float, labeltype>(dist, getExternalLabel(rez.second)));
-                top_candidates.pop();
-                if (result.size() > k) {
-                    result.pop();
-                }
             }
-        } else {
-            while (top_candidates.size() > 0) {
-                std::pair<float, tableint> rez = top_candidates.top();
-                dist = fstdistfunc_(query_data, getDataByInternalId(rez.second), dist_func_param_);
-                result.push(std::pair<float, labeltype>(dist, getExternalLabel(rez.second)));
-                top_candidates.pop();
-                if (result.size() > k) {
-                    result.pop();
-                }
+
+            result.push(std::pair<float, labeltype>(dist, getExternalLabel(rez.second)));
+            top_candidates.pop();
+            if (result.size() > k) {
+                result.pop();
             }
         }
 
         result.push({10000000, counts.first});
         result.push({20000000, counts.second});
+        delete[] query_norm_data;
         return result;
     }
 

@@ -113,8 +113,10 @@ setup_simd() {
         ret.runtime_has_avx512bw = true;
         ret.runtime_has_avx512vl = true;
 #ifndef ENABLE_AVX512
+        std::cout << "not using SIMD" << std::endl;
     }
 #else
+        std::cout << "using SIMD: AVX512" << std::endl;
         INT4_IP = INT4_IP_avx512_impl;
         INT8_IP = INT8_InnerProduct512_AVX512_impl;
         L2SqrSIMD16Ext = L2SqrSIMD16ExtAVX512;
