@@ -17,6 +17,7 @@
 
 #include "algorithm/hnswlib/hnswalg.h"
 #include "algorithm/hnswlib/space_l2.h"
+#include "basic_optimizer.h"
 #include "catch2/catch_template_test_macros.hpp"
 #include "data_cell/adapter_graph_datacell.h"
 #include "data_cell/flatten_datacell.h"
@@ -28,7 +29,7 @@
 
 using namespace vsag;
 
-TEST_CASE("search with alg_hnsw", "[ut][basic_searcher]") {
+TEST_CASE("search with alg_hnsw and optimizer", "[ut][basic_searcher]") {
     // data attr
     uint32_t base_size = 1000;
     uint32_t query_size = 100;
@@ -88,9 +89,17 @@ TEST_CASE("search with alg_hnsw", "[ut][basic_searcher]") {
     vector_data_cell->BatchInsertVector(base_vectors.data(), base_size, ids.data());
     using VectorDataTmpl = std::remove_pointer_t<decltype(vector_data_cell.get())>;
 
-    // searcher
+    // init searcher and optimizer
     auto searcher = std::make_shared<BasicSearcher<GraphTmpl, VectorDataTmpl>>(
         graph_data_cell, vector_data_cell, common);
+    auto optimizer =
+        std::make_shared<Optimizer<BasicSearcher<GraphTmpl, VectorDataTmpl>>>(common, 1);
+    optimizer->RegisterParameter(std::make_shared<IntRuntimeParameter>(PREFETCH_CACHE_LINE, 1, 10));
+    optimizer->RegisterParameter(
+        std::make_shared<IntRuntimeParameter>(PREFETCH_NEIGHBOR_CODE_NUM, 1, 10));
+    optimizer->RegisterParameter(
+        std::make_shared<IntRuntimeParameter>(PREFETCH_NEIGHBOR_VISIT_NUM, 1, 10));
+    optimizer->Optimize(searcher);
 
     // search
     InnerSearchParam search_param;

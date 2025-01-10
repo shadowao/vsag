@@ -15,6 +15,7 @@
 
 #pragma once
 #include "../utils.h"
+#include "basic_searcher.h"
 #include "logger.h"
 #include "runtime_parameter.h"
 
@@ -22,12 +23,13 @@ namespace vsag {
 
 template <typename OptimizableOBJ>
 class Optimizer {
-    Optimizer(std::shared_ptr<Allocator> allocator, int trials = 100)
-        : parameters_(allocator.get()),
-          best_params_(allocator.get()),
+public:
+    Optimizer(const IndexCommonParam& common_param, int trials = 100)
+        : parameters_(common_param.allocator_.get()),
+          best_params_(common_param.allocator_.get()),
           n_trials_(trials),
           best_loss_(std::numeric_limits<double>::max()) {
-        allocator_ = allocator.get();
+        allocator_ = common_param.allocator_.get();
         std::random_device rd;
         gen_.seed(rd());
     }
@@ -38,8 +40,8 @@ class Optimizer {
     }
 
     void
-    Optimize(OptimizableOBJ& obj) {
-        double original_loss = obj.MockRun();
+    Optimize(std::shared_ptr<OptimizableOBJ> obj) {
+        double original_loss = obj->MockRun();
 
         for (int i = 0; i < n_trials_; ++i) {
             // generate a group of runtime params
@@ -47,10 +49,10 @@ class Optimizer {
             for (auto& param : parameters_) {
                 current_params[param->name_] = param->sample(gen_);
             }
-            obj.SetRuntimeParameters(current_params);
+            obj->SetRuntimeParameters(current_params);
 
             // evaluate
-            double loss = obj.MockRun();
+            double loss = obj->MockRun();
 
             // update
             if (loss < best_loss_) {
@@ -62,6 +64,8 @@ class Optimizer {
                                                 (original_loss - best_loss_) / original_loss));
             }
         }
+
+        obj->SetRuntimeParameters(best_params_);
     }
 
     UnorderedMap<std::string, ParamValue>

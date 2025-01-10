@@ -71,4 +71,17 @@ public:
 
     Allocator* allocator_{};
 };
+
+template <typename T, typename U>
+bool
+operator==(const AllocatorWrapper<T>&, const AllocatorWrapper<U>&) noexcept {
+    return true;
+}
+
+template <typename T, typename U>
+bool
+operator!=(const AllocatorWrapper<T>& a, const AllocatorWrapper<U>& b) noexcept {
+    return !(a == b);
+}
+
 }  // namespace vsag

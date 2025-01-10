@@ -33,7 +33,7 @@
 
 namespace vsag {
 
-static const InnerIdType SAMPLE_SIZE = 10000;
+static const InnerIdType SAMPLE_SIZE = 1000;
 static const uint32_t CENTROID_EF = 500;
 static const uint32_t PREFETCH_DEGREE_DIVIDE = 3;
 static const uint32_t PREFETCH_MAXIMAL_DEGREE = 1;
