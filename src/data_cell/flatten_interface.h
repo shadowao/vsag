@@ -18,11 +18,13 @@
 #include <nlohmann/json.hpp>
 #include <string>
 
+#include "impl/runtime_parameter.h"
 #include "index/index_common_param.h"
 #include "quantization/computer.h"
 #include "stream_reader.h"
 #include "stream_writer.h"
 #include "typing.h"
+#include "vsag/constants.h"
 
 namespace vsag {
 class FlattenInterface;
@@ -83,6 +85,11 @@ public:
         return false;
     }
 
+    virtual bool
+    Decode(const uint8_t* codes, DataType* vector) {
+        return false;
+    }
+
     [[nodiscard]] virtual InnerIdType
     TotalCount() const {
         return this->total_count_;
@@ -102,10 +109,23 @@ public:
         StreamReader::ReadObj(reader, this->code_size_);
     }
 
+    virtual void
+    SetRuntimeParameters(const UnorderedMap<std::string, ParamValue>& new_params) {
+        if (new_params.find(PREFETCH_NEIGHBOR_CODE_NUM) != new_params.end()) {
+            prefetch_neighbor_codes_num_ = std::get<int>(new_params.at(PREFETCH_NEIGHBOR_CODE_NUM));
+        }
+
+        if (new_params.find(PREFETCH_CACHE_LINE) != new_params.end()) {
+            prefetch_cache_line_ = std::get<int>(new_params.at(PREFETCH_CACHE_LINE));
+        }
+    }
+
 public:
     InnerIdType total_count_{0};
     InnerIdType max_capacity_{1000000};
     uint32_t code_size_{0};
+    uint32_t prefetch_neighbor_codes_num_{1};
+    uint32_t prefetch_cache_line_{1};
 };
 
 }  // namespace vsag

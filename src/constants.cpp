@@ -52,6 +52,10 @@ const char* const PARAMETER_METRIC_TYPE = "metric_type";
 const char* const PARAMETER_USE_CONJUGATE_GRAPH = "use_conjugate_graph";
 const char* const PARAMETER_USE_CONJUGATE_GRAPH_SEARCH = "use_conjugate_graph_search";
 
+const char* const PREFETCH_NEIGHBOR_VISIT_NUM = "prefetch_neighbor_visit_num";
+const char* const PREFETCH_NEIGHBOR_CODE_NUM = "prefetch_neighbor_codes_num";
+const char* const PREFETCH_CACHE_LINE = "prefetch_cache_line";
+
 const char* const DISKANN_PARAMETER_L = "ef_construction";
 const char* const DISKANN_PARAMETER_R = "max_degree";
 const char* const DISKANN_PARAMETER_P_VAL = "pq_sample_rate";

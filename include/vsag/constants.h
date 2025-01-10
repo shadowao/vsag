@@ -50,6 +50,10 @@ extern const char* const PARAMETER_METRIC_TYPE;
 extern const char* const PARAMETER_USE_CONJUGATE_GRAPH;
 extern const char* const PARAMETER_USE_CONJUGATE_GRAPH_SEARCH;
 
+extern const char* const PREFETCH_NEIGHBOR_VISIT_NUM;
+extern const char* const PREFETCH_NEIGHBOR_CODE_NUM;
+extern const char* const PREFETCH_CACHE_LINE;
+
 extern const char* const DISKANN_PARAMETER_L;
 extern const char* const DISKANN_PARAMETER_R;
 extern const char* const DISKANN_PARAMETER_P_VAL;

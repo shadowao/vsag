@@ -70,6 +70,11 @@ public:
         io_->Prefetch(id * code_size_);
     };
 
+    bool
+    Decode(const uint8_t* codes, DataType* data) override {
+        return this->quantizer_->DecodeOne(codes, data);
+    }
+
     [[nodiscard]] std::string
     GetQuantizerName() override;
 
@@ -226,7 +231,18 @@ FlattenDataCell<QuantTmpl, IOTmpl>::query(float* result_dists,
                                           const std::shared_ptr<Computer<QuantTmpl>>& computer,
                                           const InnerIdType* idx,
                                           InnerIdType id_count) {
+    for (uint32_t i = 0; i < this->prefetch_neighbor_codes_num_ and i < id_count; i++) {
+        this->io_->Prefetch(static_cast<uint64_t>(idx[i]) * static_cast<uint64_t>(code_size_),
+                            this->prefetch_cache_line_);
+    }
+
     for (int64_t i = 0; i < id_count; ++i) {
+        if (i + this->prefetch_neighbor_codes_num_ < id_count) {
+            this->io_->Prefetch(static_cast<uint64_t>(idx[i + this->prefetch_neighbor_codes_num_]) *
+                                    static_cast<uint64_t>(code_size_),
+                                this->prefetch_cache_line_);
+        }
+
         bool release = false;
         const auto* codes = this->GetCodesById(idx[i], release);
         computer->ComputeDist(codes, result_dists + i);

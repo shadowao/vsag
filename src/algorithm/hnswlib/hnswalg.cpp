@@ -1548,4 +1548,10 @@ HierarchicalNSW::checkIntegrity() {
     std::cout << "integrity ok, checked " << connections_checked << " connections\n";
 }
 
+template MaxHeap
+HierarchicalNSW::searchBaseLayerST<false, false>(InnerIdType ep_id,
+                                                 const void* data_point,
+                                                 size_t ef,
+                                                 vsag::BaseFilterFunctor* isIdAllowed) const;
+
 }  // namespace hnswlib
