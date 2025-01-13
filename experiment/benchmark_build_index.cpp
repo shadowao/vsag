@@ -7,6 +7,7 @@
 #include "fmt/format.h"
 #include "data_loader.h"
 #include "omp.h"
+#include "vsag/constants.h"
 
 std::string dataset = "gist-960-euclidean";
 int target_npts = -1;
@@ -413,6 +414,16 @@ int search(std::vector<uint32_t> efs, uint32_t k = 10) {
                                  total_time_cost / query_npts,
                                  avg_dist_cmp / query_npts,
                                  avg_hop / query_npts));
+
+        std::cout << vsag::ip_range << std::endl;
+        std::cout << vsag::error_q << std::endl;
+        std::cout << vsag::ip_range / (1.0f * vsag::count_q) << std::endl;
+        std::cout << vsag::error_q / (1.0f * vsag::count_q) << std::endl;
+        std::cout << vsag::count_q << std::endl;
+
+        vsag::ip_range = 0;
+        vsag::error_q = 0;
+        vsag::count_q = 0;
     }
 
 

@@ -38,6 +38,7 @@
 #include "visited_list_pool.h"
 #include "../../simd/simd.h"
 #include "space_ip.h"
+#include "vsag/constants.h"
 
 #include <iostream>
 #include <vector>
@@ -1330,6 +1331,10 @@ public:
         float ip_norm_4_4 = sq_ip / (base_norm_sq_[id] * 1.0);
         float ip_norm_4d_432 = est_ip_bq / ip_bb_4_32;
 
+        vsag::ip_range += ip_norm;
+        vsag::error_q += abs(ip_norm - ip_norm_432_432);
+        vsag::count_q ++;
+
         float ret = L2_UBE(base_norm_raws_[id], query_norm_raw, ip_norm_432_432);
         return ret;
     }
@@ -1345,6 +1350,10 @@ public:
         float ip_bq_1_32 = Binary_IP((float*)query, (int8_t*)bq_base);
         float ip_bb_1_32 = error_sq_[id];
         float ip_est = ip_bq_1_32 / ip_bb_1_32;
+
+        vsag::ip_range += ip_norm;
+        vsag::error_q += abs(ip_norm - ip_est);
+        vsag::count_q ++;
 
         float ret = L2_UBE(base_norm_raws_[id], query_norm_raw, ip_est);
         return ret;

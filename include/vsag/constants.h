@@ -93,4 +93,8 @@ extern const char* const MESSAGE_PARAMETER;
 extern const char* const SERIALIZE_MAGIC_NUM;
 extern const char* const SERIALIZE_VERSION;
 
+extern double ip_range;
+extern double error_q;
+extern long long count_q;
+
 }  // namespace vsag

@@ -94,4 +94,8 @@ const char* const MESSAGE_PARAMETER = "invalid parameter";
 const char* const SERIALIZE_MAGIC_NUM = "MAGIC_NUM";
 const char* const SERIALIZE_VERSION = "VERSION";
 
+double ip_range = 0;
+double error_q = 0;
+long long count_q = 0;
+
 };  // namespace vsag
