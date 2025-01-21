@@ -66,7 +66,7 @@ Pyramid::Add(const DatasetPtr& base) {
         DatasetPtr single_data = Dataset::Make();
         single_data->Owner(false)
             ->NumElements(1)
-            ->Dim(data_dim)
+            ->NumResults(data_dim)
             ->Float32Vectors(data_vectors + data_dim * i)
             ->Ids(data_ids + i);
         for (int j = 1; j < path_slices.size(); ++j) {
@@ -142,10 +142,10 @@ Pyramid::KnnSearch(const DatasetPtr& query,
     auto result = Dataset::Make();
     size_t target_size = results.size();
     if (results.size() == 0) {
-        result->Dim(0)->NumElements(1);
+        result->NumResults(0)->NumElements(1);
         return result;
     }
-    result->Dim(static_cast<int64_t>(target_size))
+    result->NumResults(static_cast<int64_t>(target_size))
         ->NumElements(1)
         ->Owner(true, commom_param_.allocator_.get());
     int64_t* ids = (int64_t*)commom_param_.allocator_->Allocate(sizeof(int64_t) * target_size);
