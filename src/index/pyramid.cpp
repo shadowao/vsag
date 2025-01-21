@@ -142,7 +142,7 @@ Pyramid::KnnSearch(const DatasetPtr& query,
     auto result = Dataset::Make();
     size_t target_size = results.size();
     if (results.size() == 0) {
-        result->NumResults(0)->NumElements(1);
+        result->Dim(0)->NumElements(1);
         return result;
     }
     result->NumResults(static_cast<int64_t>(target_size))
