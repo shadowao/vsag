@@ -75,9 +75,22 @@ public:
     PrefetchImpl(uint64_t offset, uint64_t cache_line = 64);
 
 private:
+    inline int
+    countr_zero(uint64_t x) {
+        if (x == 0)
+            return 64;
+
+        int count = 0;
+        while ((x & 1) == 0) {
+            x >>= 1;
+            ++count;
+        }
+        return count;
+    }
+
     inline void
     update_by_block_size() {
-        block_bit_ = std::__countr_zero(block_size_);
+        block_bit_ = countr_zero(block_size_);
         in_block_mask_ = block_size_ - 1;
     }
 
