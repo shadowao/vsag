@@ -89,6 +89,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+      - name: Clean Env
+        run: rm -rf ./build
       - name: Switch Compiler
         run: |
           export CC=`which clang` 
