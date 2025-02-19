@@ -92,8 +92,8 @@ jobs:
       - name: Clean Env
         run: rm -rf ./build
       - name: Build with Clang
-        env:
-          CC: $(which clang-15)
-          CXX: $(which clang++-15)
-        run: make release
+        run: |
+          export CC=$(which clang-15)
+          export CXX=$(which clang++-15)
+          make release
 
