@@ -18,26 +18,25 @@
 #include <catch2/catch_test_macros.hpp>
 #include <memory>
 
-#include "basic_io_test.h"
 #include "safe_allocator.h"
-#include "fixtures/test_reader.h"
-#include "vsag/binary.h"
+#include "test_reader.h"
 
 using namespace vsag;
 
 TEST_CASE("ReaderIO Read Test", "[ut][ReaderIO]") {
     vsag::Binary binary;
-    binary.data = std::make_unique<uint8_t[]>(100);
-    binary.size = 100;
-    for (int i = 0; i < 100; i++) {
+    int8_t data_size = 100;
+    binary.data.reset(new int8_t[data_size]);
+    binary.size = data_size;
+    for (int8_t i = 0; i < data_size; i++) {
         binary.data[i] = i;
     }
     auto allocator = SafeAllocator::FactoryDefaultAllocator();
-    auto io = std::make_unique<ReaderIO>(std::make_shared<TestReader>(binary), allocator.get());
-    auto data = allocator->Allocate(100);
-    io->Read(0, 100, data);
-    for (int i = 0; i < 100; i++) {
-        REQUIRE(data[i] == i);
+    auto io = std::make_unique<ReaderIO>(std::make_shared<fixtures::TestReader>(binary), allocator.get());
+    auto data = (uint8_t*)allocator->Allocate(data_size);
+    io->Read(data_size, 0, data);
+    for (int i = 0; i < data_size; i++) {
+        REQUIRE(static_cast<int>(((int8_t*)data)[i]) == i);
     }
     allocator->Deallocate(data);
 }
