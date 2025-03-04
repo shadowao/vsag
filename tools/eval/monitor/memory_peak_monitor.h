@@ -48,6 +48,7 @@ private:
     pid_t pid_{0};
 
     std::ifstream infile_{};
+    std::mutex mutex_;
 };
 
 }  // namespace vsag::eval

@@ -41,6 +41,7 @@ MemoryPeakMonitor::GetResult() {
 }
 void
 MemoryPeakMonitor::Record(void* input) {
+    std::lock_guard<std::mutex> lock(mutex_);
     uint64_t val1, val2;
     this->infile_ >> val1 >> val2;
     this->infile_.clear();

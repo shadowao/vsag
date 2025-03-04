@@ -20,6 +20,7 @@
 #include <string>
 #include <variant>
 #include <vector>
+#include <mutex>
 
 namespace vsag::eval {
 

@@ -62,6 +62,7 @@ RecallMonitor::GetResult() {
 }
 void
 RecallMonitor::Record(void* input) {
+    std::lock_guard<std::mutex> lock(mutex_);
     auto [neighbors, gt_neighbors, dataset, query_data, topk] =
         *(reinterpret_cast<std::tuple<int64_t*, int64_t*, EvalDataset*, const void*, uint64_t>*>(
             input));

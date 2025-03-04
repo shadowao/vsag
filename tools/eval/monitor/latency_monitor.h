@@ -61,6 +61,8 @@ private:
     decltype(Clock::now()) cur_time_;
 
     std::vector<std::string> metrics_;
+
+    std::mutex mutex_;
 };
 
 }  // namespace vsag::eval

@@ -55,6 +55,8 @@ private:
     std::vector<double> recall_records_;
 
     std::vector<std::string> metrics_;
+
+    std::mutex mutex_;
 };
 
 }  // namespace vsag::eval
