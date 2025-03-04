@@ -21,6 +21,7 @@
 
 #include "algorithm/hgraph.h"
 #include "algorithm/ivf.h"
+#include "algorithm/sparse_index.h"
 #include "common.h"
 #include "index/brute_force.h"
 #include "index/brute_force_parameter.h"
@@ -134,6 +135,9 @@ Engine::CreateIndex(const std::string& origin_name, const std::string& parameter
             pyramid_params.FromJson(pyramid_param_obj);
             logger::debug("created a pyramid index");
             return std::make_shared<Pyramid>(pyramid_params, index_common_params);
+        } else if (name == INDEX_SPARSE) {
+            logger::debug("created a sparse index");
+            return std::make_shared<IndexImpl<SparseIndex>>(parsed_params, index_common_params);
         } else {
             LOG_ERROR_AND_RETURNS(
                 ErrorType::UNSUPPORTED_INDEX, "failed to create index(unsupported): ", name);
