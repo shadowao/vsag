@@ -15,6 +15,8 @@
 
 #include "./search_eval_case.h"
 
+#include <omp.h>
+
 #include <cstdio>
 #include <fstream>
 #include <iostream>
@@ -151,6 +153,8 @@ SearchEvalCase::do_knn_search() {
     auto min_query = std::max(query_count, 10000L);
     for (auto& monitor : this->monitors_) {
         monitor->Start();
+
+#pragma omp parallel for schedule(dynamic)
         for (int64_t id = 0; id < min_query; ++id) {
             auto i = id % query_count;
             auto query = vsag::Dataset::Make();
@@ -172,6 +176,7 @@ SearchEvalCase::do_knn_search() {
                 neighbors, ground_truth_neighbors, dataset_ptr_.get(), query_vector, topk);
             monitor->Record(&record);
         }
+
         monitor->Stop();
     }
 }
