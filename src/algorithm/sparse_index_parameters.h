@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "index_common_param.h"
+#include "index/index_common_param.h"
 #include "parameter.h"
 
 namespace vsag {

@@ -137,7 +137,9 @@ Engine::CreateIndex(const std::string& origin_name, const std::string& parameter
             return std::make_shared<Pyramid>(pyramid_params, index_common_params);
         } else if (name == INDEX_SPARSE) {
             logger::debug("created a sparse index");
-            return std::make_shared<IndexImpl<SparseIndex>>(parsed_params, index_common_params);
+            auto sparse_index =
+                std::make_shared<IndexImpl<SparseIndex>>(parsed_params, index_common_params);
+            return sparse_index;
         } else {
             LOG_ERROR_AND_RETURNS(
                 ErrorType::UNSUPPORTED_INDEX, "failed to create index(unsupported): ", name);

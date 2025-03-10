@@ -15,6 +15,8 @@
 
 #include "sparse_index.h"
 
+#include "utils/util_functions.h"
+
 namespace vsag {
 
 float
@@ -43,7 +45,7 @@ get_distance(uint32_t len1,
 }
 
 ParamPtr
-SparseIndex::MappingExternalParamAndCheck(const JsonType& external_param,
+SparseIndex::CheckAndMappingExternalParam(const JsonType& external_param,
                                           const IndexCommonParam& common_param) {
     return std::make_shared<SparseIndexParameters>();
 }
@@ -109,31 +111,12 @@ SparseIndex::KnnSearch(const DatasetPtr& query,
             }
         }
     }
-    // return result
-    auto result = Dataset::Make();
 
     while (results.size() > k) {
         results.pop();
     }
-
-    if (results.empty()) {
-        result->Dim(0)->NumElements(1);
-        return result;
-    }
-
-    result->Dim(static_cast<int64_t>(results.size()))->NumElements(1)->Owner(true, allocator_);
-
-    auto* ids = (int64_t*)allocator_->Allocate(sizeof(int64_t) * results.size());
-    result->Ids(ids);
-    auto* dists = (float*)allocator_->Allocate(sizeof(float) * results.size());
-    result->Distances(dists);
-
-    for (auto j = static_cast<int64_t>(results.size() - 1); j >= 0; --j) {
-        dists[j] = results.top().first;
-        ids[j] = results.top().second;
-        results.pop();
-    }
-    return result;
+    // return result
+    return collect_results(results);
 }
 
 DatasetPtr
@@ -163,18 +146,16 @@ SparseIndex::RangeSearch(const DatasetPtr& query,
     }
 
     // return result
-    auto result = Dataset::Make();
+    return collect_results(results);
+}
+
+DatasetPtr
+SparseIndex::collect_results(MaxHeap& results) const {
+    auto [result, ids, dists] = CreateFastDataset(results.size(), allocator_);
     if (results.empty()) {
         result->Dim(0)->NumElements(1);
         return result;
     }
-
-    result->Dim(static_cast<int64_t>(results.size()))->NumElements(1)->Owner(true, allocator_);
-
-    auto* ids = (int64_t*)allocator_->Allocate(sizeof(int64_t) * results.size());
-    result->Ids(ids);
-    auto* dists = (float*)allocator_->Allocate(sizeof(float) * results.size());
-    result->Distances(dists);
 
     for (auto j = static_cast<int64_t>(results.size() - 1); j >= 0; --j) {
         dists[j] = results.top().first;
@@ -182,6 +163,7 @@ SparseIndex::RangeSearch(const DatasetPtr& query,
         results.pop();
     }
     return result;
+    return vsag::DatasetPtr();
 }
 
 }  // namespace vsag

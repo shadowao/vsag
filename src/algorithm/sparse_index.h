@@ -15,20 +15,22 @@
 
 #pragma once
 
-#include "index/sparse_index_parameters.h"
 #include "inner_index_interface.h"
+#include "sparse_index_parameters.h"
 
 namespace vsag {
 
 class SparseIndex : public InnerIndexInterface {
 public:
     static ParamPtr
-    MappingExternalParamAndCheck(const JsonType& external_param,
+    CheckAndMappingExternalParam(const JsonType& external_param,
                                  const IndexCommonParam& common_param);
 
 public:
     explicit SparseIndex(const SparseIndexParameterPtr& param, const IndexCommonParam& common_param)
-        : InnerIndexInterface(param, common_param), datas_(allocator_), label_table_(allocator_) {
+        : InnerIndexInterface(param, common_param),
+          datas_(common_param.allocator_.get()),
+          label_table_(common_param.allocator_.get()) {
     }
 
     SparseIndex(const ParamPtr& param, const IndexCommonParam& common_param)
@@ -42,7 +44,7 @@ public:
 
     [[nodiscard]] std::string
     GetName() const override {
-        return "SparseIndex";
+        return INDEX_SPARSE;
     }
 
     std::vector<int64_t>
@@ -94,10 +96,18 @@ public:
 
     DatasetPtr
     CalDistanceById(const float* query, const int64_t* ids, int64_t count) const override {
-        return nullptr;
+        throw VsagException(vsag::ErrorType::UNSUPPORTED_INDEX_OPERATION,
+                            "no support CalDistanceById in " + GetName());
+    }
+
+    void
+    InitFeatures() override {
     }
 
 private:
+    DatasetPtr
+    collect_results(MaxHeap& results) const;
+
     std::tuple<Vector<uint32_t>, Vector<float>>
     sort_sparse_vector(const SparseVector& vector) const;
 
