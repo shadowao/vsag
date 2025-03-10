@@ -28,9 +28,7 @@ public:
 
 public:
     explicit SparseIndex(const SparseIndexParameterPtr& param, const IndexCommonParam& common_param)
-        : InnerIndexInterface(param, common_param),
-          datas_(common_param.allocator_.get()),
-          label_table_(common_param.allocator_.get()) {
+        : InnerIndexInterface(param, common_param), datas_(common_param.allocator_.get()) {
     }
 
     SparseIndex(const ParamPtr& param, const IndexCommonParam& common_param)
@@ -71,7 +69,7 @@ public:
             uint32_t len = datas_[i][0];
             writer.Write((char*)datas_[i], (2 * len + 1) * sizeof(uint32_t));
         }
-        label_table_.Serialize(writer);
+        label_table_->Serialize(writer);
     }
 
     void
@@ -86,7 +84,7 @@ public:
             datas_[i][0] = len;
             reader.Read((char*)(datas_[i] + 1), 2 * len * sizeof(uint32_t));
         }
-        label_table_.Deserialize(reader);
+        label_table_->Deserialize(reader);
     }
 
     int64_t
@@ -113,7 +111,6 @@ private:
 
 private:
     Vector<uint32_t*> datas_;
-    LabelTable label_table_;
 };
 
 }  // namespace vsag

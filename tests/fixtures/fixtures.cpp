@@ -68,7 +68,7 @@ GenerateSparseVectors(
         std::unordered_set<uint32_t> unique_ids;
         for (int d = 0; d < sparse_vectors[i].len_; d++) {
             auto u_id = distrib_id(rng);
-            while (unique_ids.contains(u_id) > 0) {
+            while (unique_ids.count(u_id) > 0) {
                 u_id = distrib_id(rng);
             }
             unique_ids.insert(u_id);

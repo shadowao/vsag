@@ -81,7 +81,7 @@ SparseIndex::Add(const DatasetPtr& base) {
             (uint32_t*)allocator_->Allocate((2 * vector.len_ + 1) * sizeof(uint32_t));
         datas_[i + cur_size][0] = vector.len_;
         auto* data = datas_[i + cur_size] + 1;
-        label_table_.Insert(i + cur_size, ids[i]);
+        label_table_->Insert(i + cur_size, ids[i]);
         std::memcpy(data, sorted_ids.data(), vector.len_ * sizeof(uint32_t));
         std::memcpy(data + vector.len_, sorted_vals.data(), vector.len_ * sizeof(float));
     }
@@ -103,7 +103,7 @@ SparseIndex::KnnSearch(const DatasetPtr& query,
                                      datas_[j][0],
                                      datas_[j] + 1,
                                      (float*)datas_[j] + 1 + datas_[j][0]);
-        auto id = label_table_.GetLabelById(j);
+        auto id = label_table_->GetLabelById(j);
         if (not filter || filter->CheckValid(id)) {
             results.emplace(distance, id);
             if (results.size() > k) {
@@ -135,7 +135,7 @@ SparseIndex::RangeSearch(const DatasetPtr& query,
                                      datas_[j][0],
                                      datas_[j] + 1,
                                      (float*)datas_[j] + 1 + datas_[j][0]);
-        auto id = label_table_.GetLabelById(j);
+        auto id = label_table_->GetLabelById(j);
         if ((not filter || filter->CheckValid(id)) && distance <= radius + 2e-6) {
             results.emplace(distance, id);
         }
