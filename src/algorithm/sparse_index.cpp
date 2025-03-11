@@ -151,7 +151,7 @@ SparseIndex::RangeSearch(const DatasetPtr& query,
 
 DatasetPtr
 SparseIndex::collect_results(MaxHeap& results) const {
-    auto [result, ids, dists] = CreateFastDataset(results.size(), allocator_);
+    auto [result, dists, ids] = CreateFastDataset(results.size(), allocator_);
     if (results.empty()) {
         result->Dim(0)->NumElements(1);
         return result;
@@ -163,7 +163,6 @@ SparseIndex::collect_results(MaxHeap& results) const {
         results.pop();
     }
     return result;
-    return vsag::DatasetPtr();
 }
 
 }  // namespace vsag
