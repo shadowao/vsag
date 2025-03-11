@@ -26,8 +26,9 @@ get_distance(uint32_t len1,
              uint32_t len2,
              const uint32_t* ids2,
              const float* vals2) {
-    float sum = 0.0f;
-    uint32_t i = 0, j = 0;
+    float sum = 0.0F;
+    uint32_t i = 0;
+    uint32_t j = 0;
 
     while (i < len1 && j < len2) {
         if (ids1[i] == ids2[j]) {
@@ -68,9 +69,10 @@ SparseIndex::sort_sparse_vector(const SparseVector& vector) const {
 
 std::vector<int64_t>
 SparseIndex::Add(const DatasetPtr& base) {
-    auto sparse_vectors = base->GetSparseVectors();
+    const auto* sparse_vectors = base->GetSparseVectors();
     auto data_num = base->GetNumElements();
-    auto ids = base->GetIds();
+    CHECK_ARGUMENT(data_num > 0, "data_num is zero when add vectors");
+    const auto* ids = base->GetIds();
     auto cur_size = datas_.size();
     datas_.resize(cur_size + data_num);
 
@@ -93,7 +95,8 @@ SparseIndex::KnnSearch(const DatasetPtr& query,
                        int64_t k,
                        const std::string& parameters,
                        const FilterPtr& filter) const {
-    auto sparse_vectors = query->GetSparseVectors();
+    const auto* sparse_vectors = query->GetSparseVectors();
+    CHECK_ARGUMENT(query->GetNumElements() == 1, "num of query should be 1");
     MaxHeap results(allocator_);
     auto [sorted_ids, sorted_vals] = sort_sparse_vector(sparse_vectors[0]);
     for (int j = 0; j < datas_.size(); ++j) {
@@ -102,18 +105,14 @@ SparseIndex::KnnSearch(const DatasetPtr& query,
                                      sorted_vals.data(),
                                      datas_[j][0],
                                      datas_[j] + 1,
-                                     (float*)datas_[j] + 1 + datas_[j][0]);
-        auto id = label_table_->GetLabelById(j);
-        if (not filter || filter->CheckValid(id)) {
-            results.emplace(distance, id);
+                                     (float*)(datas_[j] + 1 + datas_[j][0]));
+        auto label = label_table_->GetLabelById(j);
+        if (not filter || filter->CheckValid(label)) {
+            results.emplace(distance, label);
             if (results.size() > k) {
                 results.pop();
             }
         }
-    }
-
-    while (results.size() > k) {
-        results.pop();
     }
     // return result
     return collect_results(results);
@@ -125,7 +124,8 @@ SparseIndex::RangeSearch(const DatasetPtr& query,
                          const std::string& parameters,
                          const FilterPtr& filter,
                          int64_t limited_size) const {
-    auto sparse_vectors = query->GetSparseVectors();
+    const auto* sparse_vectors = query->GetSparseVectors();
+    CHECK_ARGUMENT(query->GetNumElements() == 1, "num of query should be 1");
     MaxHeap results(allocator_);
     auto [sorted_ids, sorted_vals] = sort_sparse_vector(sparse_vectors[0]);
     for (int j = 0; j < datas_.size(); ++j) {
@@ -134,10 +134,10 @@ SparseIndex::RangeSearch(const DatasetPtr& query,
                                      sorted_vals.data(),
                                      datas_[j][0],
                                      datas_[j] + 1,
-                                     (float*)datas_[j] + 1 + datas_[j][0]);
-        auto id = label_table_->GetLabelById(j);
-        if ((not filter || filter->CheckValid(id)) && distance <= radius + 2e-6) {
-            results.emplace(distance, id);
+                                     (float*)(datas_[j] + 1 + datas_[j][0]));
+        auto label = label_table_->GetLabelById(j);
+        if ((not filter || filter->CheckValid(label)) && distance <= radius + 2e-6) {
+            results.emplace(distance, label);
         }
     }
 
@@ -151,7 +151,7 @@ SparseIndex::RangeSearch(const DatasetPtr& query,
 
 DatasetPtr
 SparseIndex::collect_results(MaxHeap& results) const {
-    auto [result, dists, ids] = CreateFastDataset(results.size(), allocator_);
+    auto [result, dists, ids] = CreateFastDataset(static_cast<int64_t>(results.size()), allocator_);
     if (results.empty()) {
         result->Dim(0)->NumElements(1);
         return result;
