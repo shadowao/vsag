@@ -513,6 +513,7 @@ TestIndex::TestSerializeFile(const IndexPtr& index_from,
         query->NumElements(1)
             ->Dim(dim)
             ->Paths(queries->GetPaths() + i)
+            ->SparseVectors(queries->GetSparseVectors() + i)
             ->Float32Vectors(queries->GetFloat32Vectors() + i * dim)
             ->Owner(false);
         auto res_from = index_from->KnnSearch(query, topk, search_param);
@@ -597,6 +598,7 @@ TestIndex::TestSerializeBinarySet(const IndexPtr& index_from,
         query->NumElements(1)
             ->Dim(dim)
             ->Paths(queries->GetPaths() + i)
+            ->SparseVectors(queries->GetSparseVectors() + i)
             ->Float32Vectors(queries->GetFloat32Vectors() + i * dim)
             ->Owner(false);
         auto res_from = index_from->KnnSearch(query, topk, search_param);
@@ -636,6 +638,7 @@ TestIndex::TestSerializeReaderSet(const IndexPtr& index_from,
         query->NumElements(1)
             ->Dim(dim)
             ->Paths(queries->GetPaths() + i)
+            ->SparseVectors(queries->GetSparseVectors() + i)
             ->Float32Vectors(queries->GetFloat32Vectors() + i * dim)
             ->Owner(false);
         auto res_from = index_from->KnnSearch(query, topk, search_param);

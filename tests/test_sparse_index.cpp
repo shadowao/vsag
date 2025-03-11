@@ -54,3 +54,36 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::SparseTestIndex,
     TestRangeSearch(index, dataset, search_param, 0.49, 5, true);
     TestFilterSearch(index, dataset, search_param, 0.99, true);
 }
+
+TEST_CASE_PERSISTENT_FIXTURE(fixtures::SparseTestIndex,
+                             "Sparse Index Serialize File",
+                             "[ft][pyramid]") {
+    auto origin_size = vsag::Options::Instance().block_size_limit();
+    auto size = GENERATE(1024 * 1024 * 2);
+    auto metric_type = GENERATE("l2");
+    const std::string name = "sparse_index";
+    vsag::Options::Instance().set_block_size_limit(size);
+    auto index = TestFactory(name, build_param, true);
+    SECTION("serialize empty index") {
+        auto index2 = TestFactory(name, build_param, true);
+        auto serialize_binary = index->Serialize();
+        REQUIRE(serialize_binary.has_value());
+        auto deserialize_index = index2->Deserialize(serialize_binary.value());
+        REQUIRE(deserialize_index.has_value());
+    }
+    auto dataset = pool.GetSparseDatasetAndCreate(base_count, 0.8);
+    TestBuildIndex(index, dataset, true);
+    SECTION("serialize/deserialize by binary") {
+        auto index2 = TestFactory(name, build_param, true);
+        TestSerializeBinarySet(index, index2, dataset, search_param, true);
+    }
+    SECTION("serialize/deserialize by readerset") {
+        auto index2 = TestFactory(name, build_param, true);
+        TestSerializeReaderSet(index, index2, dataset, search_param, name, true);
+    }
+    SECTION("serialize/deserialize by file") {
+        auto index2 = TestFactory(name, build_param, true);
+        TestSerializeFile(index, index2, dataset, search_param, true);
+    }
+    vsag::Options::Instance().set_block_size_limit(origin_size);
+}
