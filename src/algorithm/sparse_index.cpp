@@ -31,13 +31,13 @@ get_distance(uint32_t len1,
     uint32_t j = 0;
 
     while (i < len1 && j < len2) {
-        if (ids1[i] == ids2[j]) {
+        if (ids1[i] < ids2[j]) {
+            i++;
+        } else if (ids1[i] > ids2[j]) {
+            j++;
+        } else {
             sum += vals1[i] * vals2[j];
             i++;
-            j++;
-        } else if (ids1[i] < ids2[j]) {
-            i++;
-        } else {
             j++;
         }
     }
