@@ -23,7 +23,7 @@ SparseIndexParameters::FromJson(const JsonType& json) {
 
 JsonType
 SparseIndexParameters::ToJson() {
-    return JsonType();
+    return {};
 }
 
 }  // namespace vsag
