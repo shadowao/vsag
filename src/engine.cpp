@@ -137,8 +137,12 @@ Engine::CreateIndex(const std::string& origin_name, const std::string& parameter
             return std::make_shared<Pyramid>(pyramid_params, index_common_params);
         } else if (name == INDEX_SPARSE) {
             logger::debug("created a sparse index");
+            JsonType sparse_json;
+            if (parsed_params.contains(INDEX_PARAM)) {
+                sparse_json = std::move(parsed_params[INDEX_PARAM]);
+            }
             auto sparse_index =
-                std::make_shared<IndexImpl<SparseIndex>>(parsed_params, index_common_params);
+                std::make_shared<IndexImpl<SparseIndex>>(sparse_json, index_common_params);
             return sparse_index;
         } else {
             LOG_ERROR_AND_RETURNS(

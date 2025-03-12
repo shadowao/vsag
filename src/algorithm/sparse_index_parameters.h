@@ -29,6 +29,9 @@ public:
     ToJson() override;
 
     SparseIndexParameters() = default;
+
+public:
+    bool need_sort{true};
 };
 
 using SparseIndexParameterPtr = std::shared_ptr<SparseIndexParameters>;

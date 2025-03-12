@@ -48,7 +48,9 @@ get_distance(uint32_t len1,
 ParamPtr
 SparseIndex::CheckAndMappingExternalParam(const JsonType& external_param,
                                           const IndexCommonParam& common_param) {
-    return std::make_shared<SparseIndexParameters>();
+    auto ptr = std::make_shared<SparseIndexParameters>();
+    ptr->FromJson(external_param);
+    return ptr;
 }
 
 std::tuple<Vector<uint32_t>, Vector<float>>
@@ -78,14 +80,19 @@ SparseIndex::Add(const DatasetPtr& base) {
 
     for (int64_t i = 0; i < data_num; ++i) {
         const auto& vector = sparse_vectors[i];
-        auto [sorted_ids, sorted_vals] = sort_sparse_vector(vector);
         datas_[i + cur_size] =
             (uint32_t*)allocator_->Allocate((2 * vector.len_ + 1) * sizeof(uint32_t));
         datas_[i + cur_size][0] = vector.len_;
         auto* data = datas_[i + cur_size] + 1;
         label_table_->Insert(i + cur_size, ids[i]);
-        std::memcpy(data, sorted_ids.data(), vector.len_ * sizeof(uint32_t));
-        std::memcpy(data + vector.len_, sorted_vals.data(), vector.len_ * sizeof(float));
+        if (need_sort_) {
+            auto [sorted_ids, sorted_vals] = sort_sparse_vector(vector);
+            std::memcpy(data, sorted_ids.data(), vector.len_ * sizeof(uint32_t));
+            std::memcpy(data + vector.len_, sorted_vals.data(), vector.len_ * sizeof(float));
+        } else {
+            std::memcpy(data, vector.ids_, vector.len_ * sizeof(uint32_t));
+            std::memcpy(data + vector.len_, vector.vals_, vector.len_ * sizeof(float));
+        }
     }
     return {};
 }

@@ -28,7 +28,9 @@ public:
 
 public:
     explicit SparseIndex(const SparseIndexParameterPtr& param, const IndexCommonParam& common_param)
-        : InnerIndexInterface(param, common_param), datas_(common_param.allocator_.get()) {
+        : InnerIndexInterface(param, common_param),
+          datas_(common_param.allocator_.get()),
+          need_sort_(param->need_sort) {
     }
 
     SparseIndex(const ParamPtr& param, const IndexCommonParam& common_param)
@@ -111,6 +113,7 @@ private:
 
 private:
     Vector<uint32_t*> datas_;
+    bool need_sort_;
 };
 
 }  // namespace vsag

@@ -15,15 +15,22 @@
 
 #include "sparse_index_parameters.h"
 
+#include "inner_string_params.h"
+
 namespace vsag {
 
 void
 SparseIndexParameters::FromJson(const JsonType& json) {
+    if (json.contains(SPARSE_NEED_SORT)) {
+        need_sort = json[SPARSE_NEED_SORT];
+    }
 }
 
 JsonType
 SparseIndexParameters::ToJson() {
-    return {};
+    JsonType json;
+    json[SPARSE_NEED_SORT] = need_sort;
+    return json;
 }
 
 }  // namespace vsag

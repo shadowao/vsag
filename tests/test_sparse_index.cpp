@@ -30,7 +30,8 @@ public:
             "dim": 16,
             "dtype": "float32",
             "metric_type": "l2",
-            "sparse_index": {
+            "index_param": {
+                "need_sort": true
             }
         })";
     constexpr static const char* search_param = R"(
