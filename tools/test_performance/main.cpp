@@ -252,16 +252,16 @@ public:
         // calculate recall
         for (int64_t i = 0; i < total; ++i) {
             // k@k
-            int64_t* neighbors = eval_dataset->GetNeighbors(i);
-            const int64_t* ground_truth = results[i]->GetIds();
+            int64_t* ground_truth = eval_dataset->GetNeighbors(i);
+            const int64_t* neighbors = results[i]->GetIds();
             auto distances_neighbors = std::shared_ptr<float[]>(new float[top_k]);
             auto distances_gt = std::shared_ptr<float[]>(new float[top_k]);
             auto dist_func = eval_dataset->GetDistanceFunc();
             for (int j = 0; j < top_k; ++j) {
                 distances_neighbors[j] = dist_func(
-                    eval_dataset->GetOneTest(neighbors[i]), eval_dataset->GetOneTrain(i), &dim);
+                    eval_dataset->GetOneTrain(neighbors[j]), eval_dataset->GetOneTest(i), &dim);
                 distances_gt[j] = dist_func(
-                    eval_dataset->GetOneTest(ground_truth[i]), eval_dataset->GetOneTrain(i), &dim);
+                    eval_dataset->GetOneTrain(ground_truth[j]), eval_dataset->GetOneTest(i), &dim);
             }
             auto hit_result =
                 get_recall(distances_neighbors.get(), distances_gt.get(), top_k, top_k);
