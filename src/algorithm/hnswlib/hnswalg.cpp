@@ -1329,7 +1329,6 @@ HierarchicalNSW::addPoint(const void* data_point, LabelType label, int level) {
         }
 
         cur_c = cur_element_count_;
-        cur_element_count_++;
         label_lookup_[label] = cur_c;
 
         curlevel = getRandomLevel(mult_);
@@ -1341,6 +1340,7 @@ HierarchicalNSW::addPoint(const void* data_point, LabelType label, int level) {
         // Initialisation of the data and label
         setExternalLabel(cur_c, label);
         memcpy(getDataByInternalId(cur_c), data_point, data_size_);
+        cur_element_count_++;
     }
 
     std::shared_lock resize_lock(resize_mutex_);
