@@ -82,6 +82,7 @@ HGraph::HGraph(const HGraphParameterPtr& hgraph_param, const vsag::IndexCommonPa
     this->build_pool_ = common_param.thread_pool_;
     if (this->build_thread_count_ > 1 && this->build_pool_ == nullptr) {
         this->build_pool_ = SafeThreadPool::FactoryDefaultThreadPool();
+        this->build_pool_->SetPoolSize(build_thread_count_);
     }
 }
 void
@@ -94,18 +95,8 @@ HGraph::Train(const DatasetPtr& base) {
 
 std::vector<int64_t>
 HGraph::Build(const DatasetPtr& data) {
-    this->basic_flatten_codes_->EnableForceInMemory();
-    if (use_reorder_) {
-        this->high_precise_codes_->EnableForceInMemory();
-    }
     this->Train(data);
-    auto new_size = this->max_capacity_.load() + 1;
-    this->resize(new_size);
     auto ret = this->Add(data);
-    this->basic_flatten_codes_->DisableForceInMemory();
-    if (use_reorder_) {
-        this->high_precise_codes_->DisableForceInMemory();
-    }
     return ret;
 }
 
@@ -991,6 +982,14 @@ static const ConstParamMap EXTERNAL_MAPPING = {
             PCA_DIM,
         },
     },
+    {
+        RABITQ_BITS_PER_DIM_QUERY,
+        {
+            HGRAPH_BASE_CODES_KEY,
+            QUANTIZATION_PARAMS_KEY,
+            RABITQ_QUANTIZATION_BITS_PER_DIM_QUERY,
+        },
+    },
 };
 
 static const std::string HGRAPH_PARAMS_TEMPLATE =
@@ -1017,6 +1016,7 @@ static const std::string HGRAPH_PARAMS_TEMPLATE =
                 "{QUANTIZATION_TYPE_KEY}": "{QUANTIZATION_TYPE_VALUE_PQ}",
                 "{SQ4_UNIFORM_QUANTIZATION_TRUNC_RATE}": 0.05,
                 "{PCA_DIM}": 0,
+                "{RABITQ_QUANTIZATION_BITS_PER_DIM_QUERY}": 32,
                 "nbits": 8
             }
         },
