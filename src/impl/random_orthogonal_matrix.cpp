@@ -114,10 +114,8 @@ RandomOrthogonalMatrix::GenerateRandomOrthogonalMatrixWithRetry() {
         bool result_gen = GenerateRandomOrthogonalMatrix();
         if (result_gen) {
             break;
-        } else {
-            logger::error(
-                fmt::format("Retrying generating random orthogonal matrix: {} times", i + 1));
         }
+        logger::warn(fmt::format("Retrying generating random orthogonal matrix: {} times", i + 1));
     }
 }
 
