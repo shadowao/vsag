@@ -108,6 +108,19 @@ RandomOrthogonalMatrix::GenerateRandomOrthogonalMatrix() {
     return true;
 }
 
+void
+RandomOrthogonalMatrix::GenerateRandomOrthogonalMatrixWithRetry() {
+    for (uint64_t i = 0; i < generate_retries_; i++) {
+        bool result_gen = GenerateRandomOrthogonalMatrix();
+        if (result_gen) {
+            break;
+        } else {
+            logger::error(
+                fmt::format("Retrying generating random orthogonal matrix: {} times", i + 1));
+        }
+    }
+}
+
 double
 RandomOrthogonalMatrix::ComputeDeterminant() const {
     // calculate determinants using LU decomposition
