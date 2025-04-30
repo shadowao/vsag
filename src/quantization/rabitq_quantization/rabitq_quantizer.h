@@ -249,9 +249,9 @@ RaBitQuantizer<metric>::TrainImpl(const DataType* data, uint64_t count) {
     }
 
     // transform centroid
-    Vector<DataType> rp_centroids(this->dim_, 0, this->allocator_);
-    rom_->Transform(centroid_.data(), rp_centroids.data());
-    centroid_.assign(rp_centroids.begin(), rp_centroids.end());
+    // Vector<DataType> rp_centroids(this->dim_, 0, this->allocator_);
+    // rom_->Transform(centroid_.data(), rp_centroids.data());
+    // centroid_.assign(rp_centroids.begin(), rp_centroids.end());
 
     this->is_trained_ = true;
     return true;
@@ -273,7 +273,8 @@ RaBitQuantizer<metric>::EncodeOneImpl(const DataType* data, uint8_t* codes) cons
     }
 
     // 2. random projection
-    rom_->Transform(pca_data.data(), transformed_data.data());
+    // rom_->Transform(pca_data.data(), transformed_data.data());
+    transformed_data.assign(pca_data.begin(), pca_data.end());
 
     // 3. normalize
     norm_type norm = NormalizeWithCentroid(
@@ -334,7 +335,8 @@ RaBitQuantizer<metric>::DecodeOneImpl(const uint8_t* codes, DataType* data) {
 
     // 4. inverse random projection
     // Note that the value may be much different between original since inv_sqrt_d is small
-    rom_->InverseTransform(transformed_data.data(), data);
+    // rom_->InverseTransform(transformed_data.data(), data);
+    data = transformed_data.data();
     return true;
 }
 
@@ -402,7 +404,8 @@ RaBitQuantizer<metric>::ProcessQueryImpl(const DataType* query,
         }
 
         // 2. random projection
-        rom_->Transform(pca_data.data(), transformed_data.data());
+        // rom_->Transform(pca_data.data(), transformed_data.data());
+        transformed_data.assign(pca_data.begin(), pca_data.end());
 
         // 3. norm
         float query_norm = NormalizeWithCentroid(
