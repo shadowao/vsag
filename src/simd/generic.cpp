@@ -613,4 +613,21 @@ BitNot(const uint8_t* x, const uint64_t num_byte, uint8_t* result) {
     }
 }
 
+void
+FHTRotate(float* vec, const uint64_t dim) {
+    int step = 1;
+    while (step < dim) {
+        int next_step = step << 1;
+        for (int i = 0; i < dim; i += next_step) {
+            for (int j = 0; j < step; j++) {
+                float even = vec[i + j];
+                float odd = vec[i + j + step];
+                vec[i + j] = even + odd;
+                vec[i + j + step] = even - odd;
+            }
+        }
+        step = next_step;
+    }
+}
+
 }  // namespace vsag::generic

@@ -985,4 +985,40 @@ BitNot(const uint8_t* x, const uint64_t num_byte, uint8_t* result) {
     return sse::BitNot(x, num_byte, result);
 #endif
 }
+
+void 
+FHTRotate(float* vec, const uint64_t dim) {
+    int step = 1;
+    while (step < dim) {
+        int next_step = step << 1;
+        for (int i = 0; i < dim; i += next_step) {
+#if defined(ENABLE_AVX2)
+            if(step > 8 && step % 8 == 0){
+                for (int j = 0; j < step; j+=8) {
+                    __m256 g1 = _mm256_loadu_ps(&vec[i + j]);
+                    __m256 g2 = _mm256_loadu_ps(&vec[i + j + step]);
+                    _mm256_storeu_ps(&vec[i + j], _mm256_add_ps(g1, g2));
+                    _mm256_storeu_ps(&vec[i + j + step], _mm256_sub_ps(g1, g2));
+                }
+            } else {
+                for (int j = 0; j < step; j++) {
+                    float even = vec[i + j];
+                    float odd = vec[i + j + step];
+                    vec[i + j] = even + odd;
+                    vec[i + j + step] = even - odd;
+                }
+            }
+#else
+            for (int j = 0; j < step; j++) {
+                float even = vec[i + j];
+                float odd = vec[i + j + step];
+                vec[i + j] = even + odd;
+                vec[i + j + step] = even - odd;
+            }
+#endif
+        }
+        step = next_step;
+    }
+}
+
 }  // namespace vsag::avx2
