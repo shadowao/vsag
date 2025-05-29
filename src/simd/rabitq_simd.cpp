@@ -49,7 +49,30 @@ GetRaBitQSQ4UBinaryIP() {
     return generic::RaBitQSQ4UBinaryIP;
 }
 
+static FHTRotateType
+GetFHTRotate() {
+    if (SimdStatus::SupportAVX512()) {
+#if defined(ENABLE_AVX512)
+        return avx512::FHTRotate;
+#endif
+    } else if (SimdStatus::SupportAVX2()) {
+#if defined(ENABLE_AVX2)
+        return avx2::FHTRotate;
+#endif
+    } else if (SimdStatus::SupportAVX()) {
+#if defined(ENABLE_AVX)
+        return generic::FHTRotate;
+#endif
+    } else if (SimdStatus::SupportSSE()) {
+#if defined(ENABLE_SSE)
+        return generic::FHTRotate;
+#endif
+    }
+    return generic::FHTRotate;
+}
+
 RaBitQFloatBinaryType RaBitQFloatBinaryIP = GetRaBitQFloatBinaryIP();
 RaBitQSQ4UBinaryType RaBitQSQ4UBinaryIP = GetRaBitQSQ4UBinaryIP();
+FHTRotateType FHTRotate = GetFHTRotate();
 
 }  // namespace vsag

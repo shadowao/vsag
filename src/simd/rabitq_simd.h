@@ -26,21 +26,31 @@ RaBitQFloatBinaryIP(const float* vector, const uint8_t* bits, uint64_t dim, floa
 
 uint32_t
 RaBitQSQ4UBinaryIP(const uint8_t* codes, const uint8_t* bits, uint64_t dim);
+
+void
+FHTRotate(float* vec, const uint64_t dim);
+
 }  // namespace avx512
 
 namespace avx2 {
 float
 RaBitQFloatBinaryIP(const float* vector, const uint8_t* bits, uint64_t dim, float inv_sqrt_d);
+void
+FHTRotate(float* vec, const uint64_t dim);
 }  // namespace avx2
 
 namespace avx {
 float
 RaBitQFloatBinaryIP(const float* vector, const uint8_t* bits, uint64_t dim, float inv_sqrt_d);
+void
+FHTRotate(float* vec, const uint64_t dim);
 }  // namespace avx
 
 namespace sse {
 float
 RaBitQFloatBinaryIP(const float* vector, const uint8_t* bits, uint64_t dim, float inv_sqrt_d);
+void
+FHTRotate(float* vec, const uint64_t dim);
 }  // namespace sse
 
 namespace generic {
@@ -49,6 +59,8 @@ RaBitQFloatBinaryIP(const float* vector, const uint8_t* bits, uint64_t dim, floa
 
 uint32_t
 RaBitQSQ4UBinaryIP(const uint8_t* codes, const uint8_t* bits, uint64_t dim);
+void
+FHTRotate(float* vec, const uint64_t dim);
 }  // namespace generic
 
 using RaBitQFloatBinaryType = float (*)(const float* vector,
@@ -58,6 +70,9 @@ using RaBitQFloatBinaryType = float (*)(const float* vector,
 
 using RaBitQSQ4UBinaryType = uint32_t (*)(const uint8_t* codes, const uint8_t* bits, uint64_t dim);
 
+using FHTRotateType = void (*)(float* vec, const uint64_t dim);
+
 extern RaBitQFloatBinaryType RaBitQFloatBinaryIP;
 extern RaBitQSQ4UBinaryType RaBitQSQ4UBinaryIP;
+extern FHTRotateType FHTRotate;
 }  // namespace vsag
