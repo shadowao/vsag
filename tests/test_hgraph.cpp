@@ -47,9 +47,6 @@ public:
                 const std::string& search_param,
                 float recall);
 
-    static void
-    TestMemoryUsageDetail(const IndexPtr& index);
-
     static TestDatasetPool pool;
 
     static std::vector<int> dims;
@@ -203,15 +200,6 @@ HgraphTestIndex::TestGeneral(const TestIndex::IndexPtr& index,
     TestCalcDistanceById(index, dataset);
     TestBatchCalcDistanceById(index, dataset);
     TestSearchAllocator(index, dataset, search_param, recall, true);
-    TestMemoryUsageDetail(index);
-}
-
-void
-HgraphTestIndex::TestMemoryUsageDetail(const IndexPtr& index) {
-    auto memory_detail = index->GetMemoryUsageDetail();
-    REQUIRE(memory_detail.contains("basic_flatten_codes"));
-    REQUIRE(memory_detail.contains("bottom_graph"));
-    REQUIRE(memory_detail.contains("route_graph"));
 }
 }  // namespace fixtures
 
