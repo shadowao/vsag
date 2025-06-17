@@ -538,23 +538,34 @@ RaBitQuantizer<metric>::ProcessQueryImpl(const DataType* query,
         // 4. query quantization
         if (num_bits_per_dim_query_ == 4) {
             // sq4 quantization
-            Vector<uint8_t> tmp_codes(this->query_code_size_, 0, this->allocator_);
-            SQ4UniformQuantizer<MetricType::METRIC_TYPE_IP> sq4_quantizer(
-                this->dim_, this->allocator_, 0.0f);
-            sq4_quantizer.Train(normed_data.data(), 1);
-            sq4_quantizer.EncodeOneImpl(normed_data.data(), tmp_codes.data());
-
-            // re-order and store codes
-            ReOrderSQ4(tmp_codes.data(), computer.buf_);
-
+            float lower_bound = std::numeric_limits<float>::max();
+            float upper_bound = std::numeric_limits<float>::lowest();
+            for (size_t i = 0; i < this->dim_; i++) {
+              const float val = normed_data[i];
+              if (val < lower_bound) lower_bound = val;
+              if (val > upper_bound) upper_bound = val;
+            }
+            const float delta = (upper_bound - lower_bound) / ((1 << num_bits_per_dim_query_) - 1);
+            const float inv_delta = (std::abs(delta) > std::numeric_limits<float>::epsilon()) ? 1.0f / delta : 0.0f;
+            sum_type query_sum = 0;
+            Vector<uint8_t> quantized_data(this->dim_, 0, this->allocator_);
+            for (int32_t i = 0; i < this->dim_; i++) {
+                const uint val = std::round((normed_data[i] - lower_bound) * inv_delta);
+                quantized_data[i] = static_cast<uint8_t>(val);
+                query_sum += val;
+            }
+            size_t offset = aligned_dim_/8;
+            uint8_t* reorder_data = reinterpret_cast<uint8_t* >(computer.buf_);
+            for (size_t d = 0; d < this->dim_; d++) {
+                for (size_t bit_pos = 0; bit_pos < num_bits_per_dim_query_; bit_pos++) {
+                    const bool bit = ((quantized_data[d] & (1 << bit_pos)) != 0);
+                    reorder_data[bit_pos * offset + d / 8] |= (bit * (1 << (d % 8)));
+                }
+            }
             // store info
-            auto lb_and_diff = sq4_quantizer.GetLBandDiff();
-            DataType lower_bound = lb_and_diff.first;
-            DataType delta = lb_and_diff.second / 15.0;
             *(DataType*)(computer.buf_ + query_offset_lb_) = lower_bound;
             *(DataType*)(computer.buf_ + query_offset_delta_) = delta;
-            *(sum_type*)(computer.buf_ + query_offset_sum_) =
-                sq4_quantizer.GetCodesSum(tmp_codes.data());
+            *(sum_type*)(computer.buf_ + query_offset_sum_) = query_sum;
         } else {
             // store codes
             memcpy(computer.buf_, normed_data.data(), normed_data.size() * sizeof(DataType));
