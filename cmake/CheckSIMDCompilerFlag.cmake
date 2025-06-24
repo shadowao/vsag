@@ -56,7 +56,7 @@ try_compile(RUNTIME_AVX512_SUPPORTED
     )
 
 file(WRITE ${CMAKE_BINARY_DIR}/instructions_test_avx512vpopcntdq.cpp "#include <immintrin.h>\nint main() { __m512i a, b; b = _mm512_popcnt_epi64(a); return 0; }")
-try_compile(COMPILER_AVX512VPOPCNTDQ_SUPPORTED
+try_compile(RUNTIME_AVX512VPOPCNTDQ_SUPPORTED
     ${CMAKE_BINARY_DIR}/instructions_test_avx512vpopcntdq
     ${CMAKE_BINARY_DIR}/instructions_test_avx512vpopcntdq.cpp
     COMPILE_DEFINITIONS "-mavx512vpopcntdq"
@@ -131,7 +131,7 @@ endif ()
 if (RUNTIME_AVX512_SUPPORTED)
   set (RUNTIME_SUPPORTED "${RUNTIME_SUPPORTED} AVX512")
 endif ()
-if (COMPILER_AVX512VPOPCNTDQ_SUPPORTED)
+if (RUNTIME_AVX512VPOPCNTDQ_SUPPORTED)
   set (RUNTIME_SUPPORTED "${RUNTIME_SUPPORTED} AVX512VPOPCNTDQ")
 endif ()
 if (RUNTIME_NEON_SUPPORTED)
