@@ -52,6 +52,7 @@ HGraph::HGraph(const HGraphParameterPtr& hgraph_param, const vsag::IndexCommonPa
       odescent_param_(hgraph_param->odescent_param),
       graph_type_(hgraph_param->graph_type),
       extra_info_size_(common_param.extra_info_size_),
+      use_old_serial_format_(common_param.use_old_serial_format_),
       deleted_ids_(allocator_) {
     this->immutable_ = hgraph_param->immutable;
     if (immutable_) {
@@ -789,25 +790,25 @@ HGraph::Serialize(StreamWriter& writer) const {
         this->use_reorder_ = false;
     }
 
-    // FIXME(wxyu): only for testing, remove before merge into the main branch
-    // if (not Options::Instance().new_version()) {
-    //     this->serialize_basic_info_v0_14(writer);
-    //     this->basic_flatten_codes_->Serialize(writer);
-    //     this->bottom_graph_->Serialize(writer);
-    //     if (this->use_reorder_) {
-    //         this->high_precise_codes_->Serialize(writer);
-    //     }
-    //     for (const auto& route_graph : this->route_graphs_) {
-    //         route_graph->Serialize(writer);
-    //     }
-    //     if (this->extra_info_size_ > 0 && this->extra_infos_ != nullptr) {
-    //         this->extra_infos_->Serialize(writer);
-    //     }
-    //     if (this->use_attribute_filter_ and this->attr_filter_index_ != nullptr) {
-    //         this->attr_filter_index_->Serialize(writer);
-    //     }
-    //     return;
-    // }
+    // FIXME(wxyu): this option is used for special purposes, like compatibility testing
+    if (this->use_old_serial_format_) {
+        this->serialize_basic_info_v0_14(writer);
+        this->basic_flatten_codes_->Serialize(writer);
+        this->bottom_graph_->Serialize(writer);
+        if (this->use_reorder_) {
+            this->high_precise_codes_->Serialize(writer);
+        }
+        for (const auto& route_graph : this->route_graphs_) {
+            route_graph->Serialize(writer);
+        }
+        if (this->extra_info_size_ > 0 && this->extra_infos_ != nullptr) {
+            this->extra_infos_->Serialize(writer);
+        }
+        if (this->use_attribute_filter_ and this->attr_filter_index_ != nullptr) {
+            this->attr_filter_index_->Serialize(writer);
+        }
+        return;
+    }
 
     this->serialize_label_info(writer);
     this->basic_flatten_codes_->Serialize(writer);
