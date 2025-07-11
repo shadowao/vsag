@@ -315,6 +315,26 @@ public:
         return std::make_shared<IndexImpl<T>>(model_value.value(), this->common_param_);
     }
 
+
+    tl::expected<void, Error>
+    RemoveHighPreciseCodes() override {
+        if (this->inner_index_->immutable_) {
+            return tl::unexpected(
+                Error(ErrorType::UNSUPPORTED_INDEX_OPERATION, "immutable index no support to remove high precise codes"));
+        }
+        SAFE_CALL(this->inner_index_->RemoveHighPreciseCodes());
+    }    
+
+    tl::expected<void, Error>
+    SetImmutable() override {
+        if (this->inner_index_->immutable_) {
+            return tl::unexpected(
+                Error(ErrorType::UNSUPPORTED_INDEX_OPERATION, "immutable index no support to set immutable again"));
+        }
+        SAFE_CALL(this->inner_index_->SetImmutable());
+    } 
+
+
     [[nodiscard]] tl::expected<BinarySet, Error>
     Serialize() const override {
         SAFE_CALL(return this->inner_index_->Serialize());

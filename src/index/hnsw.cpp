@@ -1369,4 +1369,9 @@ HNSW::knn_search_internal<std::function<bool(int64_t)>>(
     const std::string& parameters,
     const std::function<bool(int64_t)>& filter_obj) const;
 
+void
+HNSW::set_immutable() {
+    alg_hnsw_->setImmutable();
+}
+
 }  // namespace vsag

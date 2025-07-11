@@ -45,7 +45,6 @@ HGraph::HGraph(const HGraphParameterPtr& hgraph_param, const vsag::IndexCommonPa
       route_graphs_(common_param.allocator_.get()),
       use_reorder_(hgraph_param->use_reorder),
       use_elp_optimizer_(hgraph_param->use_elp_optimizer),
-      ignore_reorder_(hgraph_param->ignore_reorder),
       build_by_base_(hgraph_param->build_by_base),
       use_attribute_filter_(hgraph_param->use_attribute_filter),
       ef_construct_(hgraph_param->ef_construction),
@@ -517,7 +516,7 @@ HGraph::EstimateMemory(uint64_t num_elements) const {
         estimate_memory += block_memory_ceil(bottom_graph_memory, block_size);
     }
 
-    if (use_reorder_ && this->high_precise_codes_->InMemory() && not this->ignore_reorder_) {
+    if (use_reorder_ && this->high_precise_codes_->InMemory()) {
         auto precise_memory = this->high_precise_codes_->code_size_ * element_count;
         estimate_memory += block_memory_ceil(precise_memory, block_size);
     }
@@ -777,10 +776,6 @@ HGraph::deserialize_label_info(StreamReader& reader) const {
 
 void
 HGraph::Serialize(StreamWriter& writer) const {
-    if (this->ignore_reorder_) {
-        this->use_reorder_ = false;
-    }
-
     // FIXME(wxyu): only for testing, remove before merge into the main branch
     // if (not Options::Instance().new_version()) {
     //     this->serialize_basic_info_v0_14(writer);
@@ -900,9 +895,6 @@ HGraph::Deserialize(StreamReader& reader) {
 std::string
 HGraph::GetMemoryUsageDetail() const {
     JsonType memory_usage;
-    if (this->ignore_reorder_) {
-        this->use_reorder_ = false;
-    }
     memory_usage["basic_flatten_codes"] = this->basic_flatten_codes_->CalcSerializeSize();
     memory_usage["bottom_graph"] = this->bottom_graph_->CalcSerializeSize();
     if (this->use_reorder_) {
@@ -1139,7 +1131,7 @@ HGraph::InitFeatures() {
     if (name == QUANTIZATION_TYPE_VALUE_FP32) {
         have_fp32 = true;
     }
-    if (use_reorder_ and not ignore_reorder_ and
+    if (use_reorder_ and
         this->high_precise_codes_->GetQuantizerName() == QUANTIZATION_TYPE_VALUE_FP32) {
         have_fp32 = true;
     }
@@ -1610,4 +1602,19 @@ HGraph::GetVectorByInnerId(InnerIdType inner_id, float* data) const {
     codes->GetCodesById(inner_id, buffer.data());
     codes->Decode(buffer.data(), data);
 }
+
+void
+HGraph::RemoveHighPreciseCodes() {
+    this->high_precise_codes_.reset();
+    this->use_reorder_ = false;
+}
+
+void
+HGraph::SetImmutable() {
+    this->neighbors_mutex_.reset();
+    this->neighbors_mutex_ = std::make_shared<EmptyMutex>();
+    this->searcher_->SetMutexArray(this->neighbors_mutex_);
+    this->immutable_ = true;
+}
+
 }  // namespace vsag

@@ -472,12 +472,32 @@ public:
     /**
      * @brief Export the index's model as an empty index.
      * 
-     * @return IndexPtr A pointer to the exported model index.
      * @throws std::runtime_error If the index does not support exporting the model.
      */
     virtual tl::expected<IndexPtr, Error>
     ExportModel() const {
         throw std::runtime_error("Index doesn't support ExportModel");
+    }
+
+    /**
+     * @brief Remove the index's high precise codes.
+     * 
+     * @throws std::runtime_error If the index does not support to remove high precise codes.
+     */
+    virtual tl::expected<void, Error>
+    RemoveHighPreciseCodes() {
+        throw std::runtime_error("Index doesn't support RemoveHighPreciseCodes");
+    }    
+
+    /**
+     * @brief set the index to immutable state.
+     * After setting this state, no further modifications are supported, such as no additions or deletions 
+     *
+     * @throws std::runtime_error If the index does not support to set immutable
+     */
+    virtual tl::expected<void, Error>
+    SetImmutable() {
+        throw std::runtime_error("Index doesn't support SetImmutable");
     }
 
 public:
