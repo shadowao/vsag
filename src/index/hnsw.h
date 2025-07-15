@@ -317,6 +317,11 @@ public:
     bool
     SetDataAndGraph(FlattenInterfacePtr& data, GraphInterfacePtr& graph, Vector<LabelType>& ids);
 
+    tl::expected<void, Error>
+    SetImmutable() override {
+        SAFE_CALL(this->set_immutable());
+    }
+
 private:
     tl::expected<std::vector<int64_t>, Error>
     build(const DatasetPtr& base);
@@ -429,6 +434,9 @@ private:
 
     uint64_t
     estimate_memory(uint64_t num_elements) const;
+
+    void
+    set_immutable();
 
 private:
     std::shared_ptr<hnswlib::AlgorithmInterface<float>> alg_hnsw_;
