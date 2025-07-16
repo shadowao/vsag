@@ -420,9 +420,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex,
         for (auto& [base_quantization_str, recall] : test_cases) {
             INFO(fmt::format("quantizer str: {}", base_quantization_str));
             if (IsRaBitQ(base_quantization_str)) {
-                if (std::string(metric_type) != "l2") {
-                    continue;
-                }
                 if (dim <= fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim += fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -452,9 +449,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex, "HGraph Train & Add Test
         for (auto& [base_quantization_str, recall] : test_cases) {
             INFO(fmt::format("quantizer str: {}", base_quantization_str));
             if (IsRaBitQ(base_quantization_str)) {
-                if (std::string(metric_type) != "l2") {
-                    continue;
-                }
                 if (dim <= fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim += fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -525,9 +519,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex, "HGraph Build", "[ft][hg
         for (auto& [base_quantization_str, recall] : test_cases) {
             INFO(fmt::format("quantizer str: {}", base_quantization_str));
             if (IsRaBitQ(base_quantization_str)) {
-                if (std::string(metric_type) != "l2") {
-                    continue;
-                }
                 if (dim <= fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim += fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -558,9 +549,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex, "HGraph Build With Attr"
         for (auto& [base_quantization_str, recall] : test_cases) {
             INFO(fmt::format("quantizer str: {}", base_quantization_str));
             if (IsRaBitQ(base_quantization_str)) {
-                if (std::string(metric_type) != "l2") {
-                    continue;
-                }
                 if (dim <= fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim += fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -598,9 +586,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex, "HGraph ODescent Build",
         for (auto& [base_quantization_str, recall] : test_cases) {
             INFO(fmt::format("quantizer str: {}", base_quantization_str));
             if (IsRaBitQ(base_quantization_str)) {
-                if (std::string(metric_type) != "l2") {
-                    continue;
-                }
                 if (dim <= fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim += fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -631,9 +616,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex, "HGraph Remove", "[ft][h
         for (auto& [base_quantization_str, recall] : test_cases) {
             INFO(fmt::format("quantizer str: {}", base_quantization_str));
             if (IsRaBitQ(base_quantization_str)) {
-                if (std::string(metric_type) != "l2") {
-                    continue;
-                }
                 if (dim <= fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim += fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -666,9 +648,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex,
         for (auto& [base_quantization_str, recall] : test_cases) {
             INFO(fmt::format("quantizer str: {}", base_quantization_str));
             if (IsRaBitQ(base_quantization_str)) {
-                if (std::string(metric_type) != "l2") {
-                    continue;
-                }
                 if (dim <= fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim += fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -696,9 +675,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex, "HGraph Graph Merge", "[
     for (auto dim : dims) {
         for (auto& [base_quantization_str, recall] : test_cases) {
             if (IsRaBitQ(base_quantization_str)) {
-                if (std::string(metric_type) != "l2") {
-                    continue;
-                }
                 if (dim <= fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim += fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -731,9 +707,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex, "HGraph Add", "[ft][hgra
         for (auto& [base_quantization_str, recall] : test_cases) {
             INFO(fmt::format("quantizer str: {}", base_quantization_str));
             if (IsRaBitQ(base_quantization_str)) {
-                if (std::string(metric_type) != "l2") {
-                    continue;
-                }
                 if (dim <= fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim += fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -768,9 +741,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex,
     for (auto& [base_quantization_str, recall] : test_cases) {
         INFO(fmt::format("quantizer str: {}", base_quantization_str));
         if (IsRaBitQ(base_quantization_str)) {
-            if (std::string(metric_type) != "l2") {
-                continue;
-            }
         }
         vsag::Options::Instance().set_block_size_limit(size);
         auto param = GenerateHGraphBuildParametersString(metric_type, dim, base_quantization_str);
@@ -816,9 +786,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex,
         for (auto& [base_quantization_str, recall] : test_cases) {
             INFO(fmt::format("quantizer str: {}", base_quantization_str));
             if (IsRaBitQ(base_quantization_str)) {
-                if (std::string(metric_type) != "l2") {
-                    continue;
-                }
                 if (dim <= fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim += fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -854,9 +821,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex,
         for (auto& [base_quantization_str, recall] : test_cases) {
             INFO(fmt::format("quantizer str: {}", base_quantization_str));
             if (IsRaBitQ(base_quantization_str)) {
-                if (std::string(metric_type) != "l2") {
-                    continue;
-                }
                 if (dim <= fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim += fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -898,9 +862,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex, "HGraph Clone", "[ft][hg
         for (auto& [base_quantization_str, recall] : test_cases) {
             INFO(fmt::format("quantizer str: {}", base_quantization_str));
             if (IsRaBitQ(base_quantization_str)) {
-                if (std::string(metric_type) != "l2") {
-                    continue;
-                }
                 if (dim <= fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim += fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -936,9 +897,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex, "HGraph Export Model", "
         for (auto& [base_quantization_str, recall] : test_cases) {
             INFO(fmt::format("quantizer str: {}", base_quantization_str));
             if (IsRaBitQ(base_quantization_str)) {
-                if (std::string(metric_type) != "l2") {
-                    continue;
-                }
                 if (dim <= fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim += fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -975,9 +933,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex,
         for (auto& [base_quantization_str, recall] : test_cases) {
             INFO(fmt::format("quantizer str: {}", base_quantization_str));
             if (IsRaBitQ(base_quantization_str)) {
-                if (std::string(metric_type) != "l2") {
-                    continue;
-                }
                 if (dim <= fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim += fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -1010,9 +965,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex, "HGraph Duplicate Build"
         for (auto& [base_quantization_str, recall] : test_cases) {
             INFO(fmt::format("quantizer str: {}", base_quantization_str));
             if (IsRaBitQ(base_quantization_str)) {
-                if (std::string(metric_type) != "l2") {
-                    continue;
-                }
                 if (dim <= fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim += fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -1046,9 +998,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex, "HGraph Estimate Memory"
         for (auto& [base_quantization_str, recall] : test_cases) {
             INFO(fmt::format("quantizer str: {}", base_quantization_str));
             if (IsRaBitQ(base_quantization_str)) {
-                if (std::string(metric_type) != "l2") {
-                    continue;
-                }
                 if (dim <= fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim += fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -1158,9 +1107,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex, "HGraph With Extra Info"
         for (auto& [base_quantization_str, recall] : test_cases) {
             INFO(fmt::format("quantizer str: {}", base_quantization_str));
             if (IsRaBitQ(base_quantization_str)) {
-                if (std::string(metric_type) != "l2") {
-                    continue;
-                }
                 if (dim <= fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim += fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -1204,9 +1150,6 @@ TEST_CASE_PERSISTENT_FIXTURE(fixtures::HgraphTestIndex,
     for (auto dim : dims) {
         for (auto& [memory_io_str, disk_io_str] : io_cases) {
             if (IsRaBitQ(memory_io_str)) {
-                if (std::string(metric_type) != "l2") {
-                    continue;
-                }
                 if (dim <= fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim += fixtures::RABITQ_MIN_RACALL_DIM;
                 }
