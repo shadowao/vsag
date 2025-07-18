@@ -59,3 +59,21 @@ TEST_CASE("Iterator context", "[ut][hnsw]") {
         REQUIRE(filter_context.CheckPoint(55));
     }
 }
+
+TEST_CASE("Iterator context byte and bit position", "[ut][hnsw][byte]") {
+    auto allocator = std::make_shared<DefaultAllocator>();
+    IteratorFilterContext filter_context = IteratorFilterContext();
+    InnerIdType id1 = 100;
+    REQUIRE(IteratorFilterContext::byte_pos(id1) == 12);
+    REQUIRE(IteratorFilterContext::bit_pos(id1) == 4);
+    id1 = 128;
+    REQUIRE(IteratorFilterContext::byte_pos(id1) == 16);
+    REQUIRE(IteratorFilterContext::bit_pos(id1) == 0);
+    id1 = 3;
+    REQUIRE(IteratorFilterContext::byte_pos(id1) == 0);
+    REQUIRE(IteratorFilterContext::bit_pos(id1) == 3);
+    uint32_t max_size = 1000;
+    int64_t ef_search = 200;
+    auto res = filter_context.init(max_size, ef_search, allocator.get());
+    REQUIRE(res.has_value());
+}

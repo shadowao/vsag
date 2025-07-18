@@ -22,6 +22,11 @@ namespace vsag {
 class IteratorContext {
 public:
     virtual ~IteratorContext() = default;
+
+    virtual int64_t
+    IterationCount() = 0;
+    virtual int64_t
+    VisitedPointCount() = 0;
 };
 
 };  // namespace vsag
