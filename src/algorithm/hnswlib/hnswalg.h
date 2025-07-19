@@ -83,7 +83,7 @@ private:
         resize_mutex_{};  // Ensures safety during the resize process; is the largest lock.
     mutable std::shared_mutex
         max_level_mutex_{};  // Ensures access safety for global max_level and entry point.
-    mutable vsag::MutexArrayPtr
+    mutable vsag::Vector<std::shared_mutex>
         points_locks_;  // Ensures access safety for the link list and label of a specific point.
     mutable std::shared_mutex
         label_lookup_lock_{};  // Ensures access safety for the global label lookup table.
@@ -175,7 +175,7 @@ public:
 
     inline LabelType
     getExternalLabel(InnerIdType internal_id) const {
-        vsag::SharedLock lock(points_locks_, internal_id);
+        std::shared_lock lock(points_locks_[internal_id]);
         LabelType value;
         std::memcpy(&value,
                     data_level0_memory_->GetElementPtr(internal_id, label_offset_),
@@ -185,7 +185,7 @@ public:
 
     inline void
     setExternalLabel(InnerIdType internal_id, LabelType label) const {
-        vsag::LockGuard lock(points_locks_, internal_id);
+        std::unique_lock lock(points_locks_[internal_id]);
         std::memcpy(data_level0_memory_->GetElementPtr(internal_id, label_offset_),
                     &label,
                     sizeof(LabelType));
@@ -305,11 +305,11 @@ public:
     inline void
     getLinklistAtLevel(InnerIdType internal_id, int level, void* neighbors) const {
         if (level == 0) {
-            vsag::SharedLock lock(points_locks_, internal_id);
+            std::shared_lock lock(points_locks_[internal_id]);
             auto src = data_level0_memory_->GetElementPtr(internal_id, offsetLevel0_);
             std::memcpy(neighbors, src, size_links_level0_);
         } else {
-            vsag::SharedLock lock(points_locks_, internal_id);
+            std::shared_lock lock(points_locks_[internal_id]);
             std::memcpy(neighbors,
                         link_lists_[internal_id] + (level - 1) * size_links_per_element_,
                         size_links_per_element_);
