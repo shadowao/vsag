@@ -28,4 +28,21 @@ LabelTable::MergeOther(const LabelTablePtr& other, const IdMapFunction& id_map) 
     }
     total_count_ += other_size;
 }
+
+void
+LabelTable::Insert(InnerIdType id, LabelType label) {
+    if (use_reverse_map_) {
+        label_remap_[label] = id;
+    }
+    if (id + 1 > label_table_.size()) {
+        label_table_.resize(id + 1);
+    }
+    label_table_[id] = label;
+    total_count_++;
+    if (label_remap_[label] != id || label < 0) {
+      logger::error(fmt::format("ERROR!!!! label table remap size({}), total_count_({}), label_table_.size={}, id={}, label={}",
+          label_remap_.size(), total_count_.load(), label_table_.size(), id, label));
+      abort();
+    }
+}
 }  // namespace vsag

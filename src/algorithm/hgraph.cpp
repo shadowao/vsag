@@ -669,12 +669,23 @@ HGraph::serialize_basic_info_v0_14(StreamWriter& writer) const {
     StreamWriter::WriteVector(writer, this->label_table_->label_table_);
 
     uint64_t size = this->label_table_->label_remap_.size();
+    uint64_t cnt = 0;
     StreamWriter::WriteObj(writer, size);
     for (const auto& pair : this->label_table_->label_remap_) {
         auto key = pair.first;
         StreamWriter::WriteObj(writer, key);
         StreamWriter::WriteObj(writer, pair.second);
+        ++cnt;
+        if (key < 0) {
+          logger::error(fmt::format("invalid key({}), value({}) cnt({}) size({}), capacity={}, label_table_.size={}", key, pair.second, cnt, size, capacity, this->label_table_->label_table_.size()));
+          abort();
+        }
     }
+    if (cnt != size) {
+      logger::error(fmt::format("label table remap serialize cnt({}) != size({}), capacity={}, label_table_.size={}", cnt, size, capacity, this->label_table_->label_table_.size()));
+      abort();
+    }
+    logger::error(fmt::format("serialize info cnt({}) size({}), capacity={}, label_table_.size={}", cnt, size, capacity, this->label_table_->label_table_.size()));
 }
 
 void

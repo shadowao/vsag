@@ -37,17 +37,8 @@ public:
           label_remap_(0, allocator),
           use_reverse_map_(use_reverse_map){};
 
-    inline void
-    Insert(InnerIdType id, LabelType label) {
-        if (use_reverse_map_) {
-            label_remap_[label] = id;
-        }
-        if (id + 1 > label_table_.size()) {
-            label_table_.resize(id + 1);
-        }
-        label_table_[id] = label;
-        total_count_++;
-    }
+    void
+    Insert(InnerIdType id, LabelType label);
 
     inline bool
     Remove(LabelType label) {
