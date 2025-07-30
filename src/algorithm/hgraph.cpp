@@ -1492,6 +1492,14 @@ HGraph::CheckAndMappingExternalParam(const JsonType& external_param,
             HGRAPH_REMOVE_FLAG_BIT,
             {HGRAPH_GRAPH_KEY, REMOVE_FLAG_BIT},
         },
+        {
+            RABITQ_QUERY_ALIGNED_BITS,
+            {
+                HGRAPH_BASE_CODES_KEY,
+                QUANTIZATION_PARAMS_KEY,
+                RABITQ_QUANTIZATION_QUERY_ALIGNED_BITS,
+            },
+        },
     };
     if (common_param.data_type_ == DataTypes::DATA_TYPE_INT8) {
         throw VsagException(ErrorType::INVALID_ARGUMENT,

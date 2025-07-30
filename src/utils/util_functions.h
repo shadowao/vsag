@@ -118,4 +118,9 @@ base64_decode_obj(const std::string& in, T& obj) {
     memcpy(&obj, to_string.c_str(), sizeof(obj));
 }
 
+template <class T>
+static inline __attribute__((always_inline)) bool is_power_of_two(T value) {
+    return value != 0 && (value & (value - 1)) == 0;
+}
+
 }  // namespace vsag

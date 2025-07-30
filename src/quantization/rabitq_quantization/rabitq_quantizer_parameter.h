@@ -33,6 +33,7 @@ public:
 public:
     uint64_t pca_dim_{0};
     uint64_t num_bits_per_dim_query_{32};
+    uint64_t query_aligned_bits_{512};
     bool use_fht_{false};
 };
 

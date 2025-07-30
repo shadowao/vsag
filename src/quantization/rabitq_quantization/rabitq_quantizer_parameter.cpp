@@ -31,6 +31,9 @@ RaBitQuantizerParameter::FromJson(const JsonType& json) {
     if (json.contains(RABITQ_QUANTIZATION_BITS_PER_DIM_QUERY)) {
         this->num_bits_per_dim_query_ = json[RABITQ_QUANTIZATION_BITS_PER_DIM_QUERY];
     }
+    if (json.contains(RABITQ_QUANTIZATION_QUERY_ALIGNED_BITS)) {
+        this->query_aligned_bits_ = json[RABITQ_QUANTIZATION_QUERY_ALIGNED_BITS];
+    }
     if (json.contains(USE_FHT)) {
         this->use_fht_ = json[USE_FHT];
     }
@@ -42,6 +45,7 @@ RaBitQuantizerParameter::ToJson() {
     json[QUANTIZATION_TYPE_KEY] = QUANTIZATION_TYPE_VALUE_RABITQ;
     json[PCA_DIM] = this->pca_dim_;
     json[RABITQ_QUANTIZATION_BITS_PER_DIM_QUERY] = this->num_bits_per_dim_query_;
+    json[RABITQ_QUANTIZATION_QUERY_ALIGNED_BITS] = this->query_aligned_bits_;
     json[USE_FHT] = this->use_fht_;
     return json;
 }

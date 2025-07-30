@@ -72,6 +72,7 @@ const char* const SQ4_UNIFORM_QUANTIZATION_TRUNC_RATE = "sq4_uniform_trunc_rate"
 const char* const PRODUCT_QUANTIZATION_DIM = "pq_dim";
 const char* const PRODUCT_QUANTIZATION_BITS = "pq_bits";
 const char* const USE_FHT = "use_fht";
+const char* const RABITQ_QUANTIZATION_QUERY_ALIGNED_BITS = "rabitq_query_aligned_bits";
 
 // graph param value
 const char* const GRAPH_PARAM_MAX_DEGREE = "max_degree";

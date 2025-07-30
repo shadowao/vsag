@@ -45,6 +45,13 @@ RaBitQSQ4UBinaryIP(const uint8_t* codes, const uint8_t* bits, uint64_t dim) {
         }
         uint64_t sum = _mm512_reduce_add_epi64(acc);
 
+        for (; i + 8 <= num_bytes; i += 8) {
+            uint64_t vec_codes = *reinterpret_cast<const uint64_t*>(cur + i);
+            uint64_t vec_bits = *reinterpret_cast<const uint64_t*>(bits + i);
+            uint64_t bitwise_and = vec_codes & vec_bits;
+            sum += __builtin_popcountll(bitwise_and);
+        }
+
         for (; i < num_bytes; ++i) {
             uint8_t bitwise_and = cur[i] & bits[i];
             sum += __builtin_popcount(bitwise_and);

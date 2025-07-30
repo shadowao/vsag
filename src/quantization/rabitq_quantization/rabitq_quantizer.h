@@ -51,6 +51,7 @@ public:
                             uint64_t pca_dim,
                             uint64_t num_bits_per_dim_query,
                             bool use_fht,
+                            int query_aligned_bits,
                             Allocator* allocator);
 
     explicit RaBitQuantizer(const RaBitQuantizerParamPtr& param,
@@ -170,6 +171,7 @@ private:
      */
     uint64_t aligned_dim_{0};
     uint64_t num_bits_per_dim_query_{32};
+    uint64_t query_aligned_bits_{512};
     uint64_t query_code_size_{0};
     uint64_t query_offset_lb_{0};
     uint64_t query_offset_delta_{0};
@@ -189,7 +191,7 @@ private:
 
 template <MetricType metric>
 RaBitQuantizer<metric>::RaBitQuantizer(
-    int dim, uint64_t pca_dim, uint64_t num_bits_per_dim_query, bool use_fht, Allocator* allocator)
+    int dim, uint64_t pca_dim, uint64_t num_bits_per_dim_query, bool use_fht, int query_aligned_bits, Allocator* allocator)
     : Quantizer<RaBitQuantizer<metric>>(dim, allocator) {
     // dim
     pca_dim_ = pca_dim;
@@ -203,6 +205,7 @@ RaBitQuantizer<metric>::RaBitQuantizer(
 
     // bits query
     num_bits_per_dim_query_ = num_bits_per_dim_query;
+    query_aligned_bits_ = query_aligned_bits;
 
     // centroid
     centroid_.resize(this->dim_, 0);
@@ -249,7 +252,10 @@ RaBitQuantizer<metric>::RaBitQuantizer(
         // e.g., for a float query with dim == 4:   [1, 2, 4, 8]
         //       suppose original SQ4U code is:     [0001 0010, 0100 1000]  (0001 is 4)
         //       then, the re-ordered code is:      [1000 0100, 0010 0001]
-        aligned_dim_ = ((this->dim_ + 511) / 512) * 512;
+        if (query_aligned_bits_ < 8 || ! is_power_of_two(query_aligned_bits_)) {
+            throw VsagException(ErrorType::INVALID_ARGUMENT, "invalid rabitq query aligned bits");
+        }
+        aligned_dim_ = ((this->dim_ + query_aligned_bits_ - 1) / query_aligned_bits_) * query_aligned_bits_;
         auto sq_code_size = aligned_dim_ / 8 * num_bits_per_dim_query_;
         this->query_code_size_ = (sq_code_size / align_size) * align_size;
 
@@ -281,6 +287,7 @@ RaBitQuantizer<metric>::RaBitQuantizer(const RaBitQuantizerParamPtr& param,
                              param->pca_dim_,
                              param->num_bits_per_dim_query_,
                              param->use_fht_,
+                             param->query_aligned_bits_,
                              common_param.allocator_.get()){};
 
 template <MetricType metric>
@@ -457,11 +464,13 @@ RaBitQuantizer<metric>::ComputeQueryBaseImpl(const uint8_t* query_codes,
     // codes2 -> base  (binary) + norm + error
     float ip_bq_estimate;
     if (num_bits_per_dim_query_ == 4) {
-        std::vector<uint8_t> tmp(aligned_dim_ / 8, 0);
-        memcpy(tmp.data(), base_codes, offset_norm_);
-
-        ip_bq_estimate = RaBitQSQ4UBinaryIP(query_codes, tmp.data(), aligned_dim_);
-
+        if (query_aligned_bits_ != 8) { // not same size with base code
+            std::vector<uint8_t> tmp(aligned_dim_ / 8, 0);
+            memcpy(tmp.data(), base_codes, offset_norm_);
+            ip_bq_estimate = RaBitQSQ4UBinaryIP(query_codes, tmp.data(), aligned_dim_);
+        } else {
+            ip_bq_estimate = RaBitQSQ4UBinaryIP(query_codes, base_codes, aligned_dim_);
+        }
         sum_type base_sum = *((sum_type*)(base_codes + offset_sum_));
         sum_type query_sum = *((sum_type*)(query_codes + query_offset_sum_));
         DataType lower_bound = *((DataType*)(query_codes + query_offset_lb_));
