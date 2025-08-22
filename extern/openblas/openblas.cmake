@@ -5,10 +5,7 @@ set(install_dir ${CMAKE_CURRENT_BINARY_DIR}/${name}/install)
 
 ExternalProject_Add(
     ${name}
-    URL https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.30/OpenBLAS-0.3.30.tar.gz
-        # this url is maintained by the vsag project, if it's broken, please try
-        #  the latest commit or contact the vsag project
-        http://vsagcache.oss-rg-china-mainland.aliyuncs.com/openblas/OpenBLAS-0.3.30.tar.gz
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/OpenBLAS-v0.3.30.tar.gz
     URL_HASH MD5=8db3d57f4d4485c6ae3f21ea465660e7
     DOWNLOAD_NAME OpenBLAS-v0.3.30.tar.gz
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/${name}
@@ -30,8 +27,8 @@ ExternalProject_Add(
     LOG_BUILD TRUE
     LOG_INSTALL TRUE
     DOWNLOAD_NO_PROGRESS 1
-    INACTIVITY_TIMEOUT 5
-    TIMEOUT 30
+    INACTIVITY_TIMEOUT 60
+    TIMEOUT 3000
 )
 
 include_directories(${install_dir}/include)
