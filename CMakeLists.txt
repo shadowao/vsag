@@ -9,6 +9,7 @@ project (VSAG
 )
 
 message ("CPU ARCH: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+message ("OS INFO: ${CMAKE_SYSTEM}")
 
 macro (vsag_add_exe_linker_flag flag)
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${flag}")
