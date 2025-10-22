@@ -24,8 +24,9 @@ namespace fixtures {
 struct SINDIParam {
     bool use_reorder = true;
     float doc_prune_ratio = 0.0;
-    int window_size = 100;
+    int window_size = 10000;
     bool deserialize_without_footer = false;
+    int term_id_limit = 2000;
 };
 
 class SINDITestIndex : public fixtures::TestIndex {
@@ -53,20 +54,109 @@ public:
                 "use_reorder": {},
                 "doc_prune_ratio": {},
                 "window_size": {},
+                "term_id_limit": {},
                 "deserialize_without_footer": {}
-
             }}
         }})";
         return fmt::format(build_param_template,
                            param.use_reorder,
                            param.doc_prune_ratio,
                            param.window_size,
+                           param.term_id_limit,
                            param.deserialize_without_footer);
     }
 };
 TestDatasetPool SINDITestIndex::pool{};
 
 }  // namespace fixtures
+
+TEST_CASE_PERSISTENT_FIXTURE(fixtures::SINDITestIndex,
+                             "Invalid Build and Search Parameter",
+                             "[ft][sindi]") {
+    SECTION("invalid doc_prune_ratio") {
+        fixtures::SINDIParam param;
+        param.doc_prune_ratio = 0.6;
+        REQUIRE_THROWS(
+            TestFactory("sindi", fixtures::SINDITestIndex::GenerateBuildParameter(param), false));
+        param.doc_prune_ratio = -0.1;
+        REQUIRE_THROWS(
+            TestFactory("sindi", fixtures::SINDITestIndex::GenerateBuildParameter(param), false));
+    }
+
+    SECTION("invalid window_size") {
+        fixtures::SINDIParam param;
+        param.window_size = 5000;
+        REQUIRE_THROWS(
+            TestFactory("sindi", fixtures::SINDITestIndex::GenerateBuildParameter(param), false));
+        param.window_size = 1100000;
+        REQUIRE_THROWS(
+            TestFactory("sindi", fixtures::SINDITestIndex::GenerateBuildParameter(param), false));
+    }
+    fixtures::SINDIParam param;
+    param.window_size = 10000;
+    auto build_param = fixtures::SINDITestIndex::GenerateBuildParameter(param);
+    auto index = TestFactory("sindi", build_param, true);
+    auto dataset = pool.GetSparseDatasetAndCreate(base_count, 128, 0.8);
+    REQUIRE(index->GetIndexType() == vsag::IndexType::SINDI);
+    TestBuildIndex(index, dataset, true);
+    {
+        auto invalid_search_param = R"({
+            "sindi": {
+                "n_candidate": -1,
+                "query_prune_ratio": 0.0,
+                "term_prune_ratio": 0.0
+            }
+        })";
+        TestKnnSearch(index, dataset, invalid_search_param, 0.99, false);
+        invalid_search_param = R"({
+            "sindi":{
+                "n_candidate": 10,
+                "query_prune_ratio": 1.2,
+                "term_prune_ratio": 0.0
+            }
+        })";
+        TestKnnSearch(index, dataset, invalid_search_param, 0.99, false);
+        invalid_search_param = R"({
+            "sindi":{
+                "n_candidate": 10,
+                "query_prune_ratio": 0.0,
+                "term_prune_ratio": -0.1
+            }
+        })";
+        TestKnnSearch(index, dataset, invalid_search_param, 0.99, false);
+    }
+
+    // invalid multi data
+    int64_t ids[2] = {114, 514};
+    vsag::SparseVector invalid_sv_array[2];
+    std::vector<uint32_t> sv_ids = {100};
+    std::vector<float> sv_vals = {0.5};
+    invalid_sv_array[0].len_ = 1;
+    invalid_sv_array[0].ids_ = sv_ids.data();
+    invalid_sv_array[0].vals_ = sv_vals.data();
+    invalid_sv_array[1].len_ = 0;
+
+    auto invalid_data = vsag::Dataset::Make();
+    invalid_data->NumElements(2)->SparseVectors(invalid_sv_array)->Ids(ids)->Owner(false);
+    auto insert_result = index->Add(invalid_data);
+    REQUIRE(insert_result.has_value());
+    auto failed_ids = insert_result.value();
+    REQUIRE(failed_ids.size() == 1);
+    REQUIRE(failed_ids[0] == ids[1]);
+
+    // invalid single data
+    vsag::SparseVector sparse_vector;
+    int64_t id = 7777;
+    sparse_vector.len_ = 0;
+    auto data = vsag::Dataset::Make();
+    data->NumElements(1)->Owner(false)->SparseVectors(&sparse_vector)->Ids(&id);
+    insert_result = index->Add(data);
+    REQUIRE(insert_result.has_value());
+    failed_ids = insert_result.value();
+    REQUIRE(failed_ids[0] == id);
+    auto search_result = index->KnnSearch(data, 1, search_param);
+    REQUIRE_FALSE(search_result.has_value());
+}
 
 TEST_CASE_PERSISTENT_FIXTURE(fixtures::SINDITestIndex, "SINDI Build and Search", "[ft][sindi]") {
     fixtures::SINDIParam param;
