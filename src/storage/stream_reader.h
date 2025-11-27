@@ -104,6 +104,7 @@ public:
 
 protected:
     uint64_t length_{0};
+    uint64_t io_count_{0};
 
 private:
     std::stack<uint64_t> positions_;
@@ -119,6 +120,8 @@ public:
 
     [[nodiscard]] uint64_t
     GetCursor() const override;
+
+    ~ReadFuncStreamReader();
 
 public:
     ReadFuncStreamReader(std::function<void(uint64_t, uint64_t, void*)> read_func,
@@ -140,6 +143,8 @@ public:
 
     [[nodiscard]] uint64_t
     GetCursor() const override;
+
+    ~IOStreamReader();
 
 public:
     explicit IOStreamReader(std::istream& istream);
