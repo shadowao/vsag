@@ -165,6 +165,8 @@ MemoryBlockIO::ReadImpl(uint64_t size, uint64_t offset, uint8_t* data) const {
             ++start_no;
             start_off = 0;
         }
+    } else {
+      logger::error(fmt::format("Read Overbound: read_size({}), offset(offset), block_size({}), data_size({})", size, offset, block_size_, this->size_));
     }
     return ret;
 }
@@ -174,13 +176,19 @@ MemoryBlockIO::DirectReadImpl(uint64_t size, uint64_t offset, bool& need_release
     if (check_valid_offset(size + offset)) {
         if (check_in_one_block(offset, size + offset)) {
             need_release = false;
-            return this->get_data_ptr(offset);
+            auto * ptr = this->get_data_ptr(offset);
+            if (nullptr  == ptr) {
+                logger::error(fmt::format("Read nullptr: read_size({}), offset(offset), block_size({}), data_size({})", size, offset, block_size_, this->size_));
+            }
+            return ptr;
         } else {
             need_release = true;
             auto* ptr = reinterpret_cast<uint8_t*>(this->allocator_->Allocate(size));
             this->ReadImpl(size, offset, ptr);
             return ptr;
         }
+    } else {
+        logger::error(fmt::format("Read Overbound: read_size({}), offset(offset), block_size({}), data_size({})", size, offset, block_size_, this->size_));
     }
     return nullptr;
 }
