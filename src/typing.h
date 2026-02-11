@@ -50,8 +50,8 @@ using UnorderedMap = tsl::robin_map<KeyType,
                                     vsag::AllocatorWrapper<std::pair<const KeyType, ValType>>>;
 
 template <typename KeyType, typename ValType>
-using STLUnorderedMap =
-    std::unordered_map<KeyType,
+using PGUnorderedMap =
+    tsl::robin_pg_map<KeyType,
                        ValType,
                        std::hash<KeyType>,
                        std::equal_to<KeyType>,
