@@ -1,3 +1,4 @@
+#pragma once
 
 // Copyright 2024-present the vsag project
 //
@@ -45,6 +46,10 @@ public:
 
     void
     Train();
+
+    /** Deterministic flip pattern for reproducible rotations (e.g. TurboQuant rotation_seed). */
+    void
+    Train(uint64_t seed);
 
     void
     CopyFlip(uint8_t* out_flip) const;

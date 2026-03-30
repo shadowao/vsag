@@ -22,6 +22,7 @@
 #include "quantization/quantizer_headers.h"
 #include "quantization/sparse_quantization/sparse_quantizer.h"
 #include "quantization/transform_quantization/transform_quantizer_parameter.h"
+#include "quantization/turboquant_quantization/turboquant_quantizer.h"
 #include "sparse_vector_datacell.h"
 
 namespace vsag {
@@ -135,6 +136,10 @@ make_instance(const FlattenInterfaceParamPtr& param, const IndexCommonParam& com
     }
     if (actual_quant_type == QUANTIZATION_TYPE_VALUE_RABITQ) {
         return make_instance_with_tq<RaBitQuantizer<metric>, IOTemp, metric>(
+            param, common_param, is_transform_quantizer);
+    }
+    if (actual_quant_type == QUANTIZATION_TYPE_VALUE_TURBOQUANT) {
+        return make_instance_with_tq<TurboQuantQuantizer<metric>, IOTemp, metric>(
             param, common_param, is_transform_quantizer);
     }
     if (actual_quant_type == QUANTIZATION_TYPE_VALUE_SPARSE and not is_transform_quantizer) {

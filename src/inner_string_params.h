@@ -78,6 +78,7 @@ const char* const QUANTIZATION_TYPE_VALUE_PQFS = "pqfs";
 const char* const QUANTIZATION_TYPE_VALUE_RABITQ = "rabitq";
 const char* const QUANTIZATION_TYPE_VALUE_SPARSE = "sparse";
 const char* const QUANTIZATION_TYPE_VALUE_TQ = "tq";
+const char* const QUANTIZATION_TYPE_VALUE_TURBOQUANT = "turboquant";
 
 // vector transformer type
 const char* const TRANSFORMER_TYPE_VALUE_PCA = "pca";
@@ -100,6 +101,9 @@ const char* const RABITQ_QUANTIZATION_BITS_PER_DIM_BASE_KEY = "rabitq_bits_per_d
 const char* const SQ4_UNIFORM_QUANTIZATION_TRUNC_RATE_KEY = "sq4_uniform_trunc_rate";
 const char* const PRODUCT_QUANTIZATION_DIM_KEY = "pq_dim";
 const char* const PRODUCT_QUANTIZATION_BITS_KEY = "pq_bits";
+const char* const TURBOQUANT_BITS_PER_DIM_KEY = "turboquant_bits_per_dim";
+const char* const TURBOQUANT_VARIANT_KEY = "turboquant_variant";
+const char* const TURBOQUANT_ROTATION_SEED_KEY = "turboquant_rotation_seed";
 
 // sparse index param
 const char* const SPARSE_NEED_SORT = "need_sort";
@@ -203,6 +207,7 @@ const std::unordered_map<std::string, std::string> DEFAULT_MAP = {
     {"QUANTIZATION_TYPE_VALUE_FP16", QUANTIZATION_TYPE_VALUE_FP16},
     {"QUANTIZATION_TYPE_VALUE_BF16", QUANTIZATION_TYPE_VALUE_BF16},
     {"QUANTIZATION_TYPE_VALUE_RABITQ", QUANTIZATION_TYPE_VALUE_RABITQ},
+    {"QUANTIZATION_TYPE_VALUE_TURBOQUANT", QUANTIZATION_TYPE_VALUE_TURBOQUANT},
     {"PRODUCT_QUANTIZATION_DIM_KEY", PRODUCT_QUANTIZATION_DIM_KEY},
     {"PRODUCT_QUANTIZATION_BITS_KEY", PRODUCT_QUANTIZATION_BITS_KEY},
     {"GRAPH_TYPE_VALUE_NSW", GRAPH_TYPE_VALUE_NSW},

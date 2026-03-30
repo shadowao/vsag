@@ -157,6 +157,10 @@ extern const char* const RABITQ_BITS_PER_DIM_BASE;
 extern const char* const RABITQ_USE_FHT;
 extern const char* const INDEX_TQ_CHAIN;
 
+extern const char* const TURBOQUANT_BITS_PER_DIM;
+extern const char* const TURBOQUANT_ROTATION_SEED;
+extern const char* const TURBOQUANT_VARIANT;
+
 extern const char* const HGRAPH_SUPPORT_REMOVE;
 extern const char* const HGRAPH_REMOVE_FLAG_BIT;
 

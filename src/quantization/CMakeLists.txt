@@ -26,6 +26,9 @@ set (QUANTIZER_SRC
         product_quantization/pq_fastscan_quantizer.cpp
         product_quantization/product_quantizer.cpp
         rabitq_quantization/rabitq_quantizer.cpp
+        turboquant_quantization/turboquant_codebook.cpp
+        turboquant_quantization/turboquant_quantizer.cpp
+        turboquant_quantization/turboquant_quantizer_parameter.cpp
         quantizer_parameter.cpp
         fp32_quantizer_parameter.cpp
         int8_quantizer_parameter.cpp

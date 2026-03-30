@@ -1,4 +1,3 @@
-
 // Copyright 2024-present the vsag project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,12 +14,17 @@
 
 #pragma once
 
-#include "fp32_quantizer.h"
-#include "product_quantization/pq_fastscan_quantizer.h"
-#include "product_quantization/product_quantizer.h"
-#include "quantizer.h"
-#include "rabitq_quantization/rabitq_quantizer.h"
-#include "turboquant_quantization/turboquant_quantizer.h"
-#include "scalar_quantization/sq_headers.h"
-#include "sparse_quantization/sparse_quantizer.h"
-#include "transform_quantization/transform_quantizer.h"
+#include <cstdint>
+#include <vector>
+
+namespace vsag {
+
+/**
+ * Build Lloyd–Max-style centroids for N(0, sigma^2) with K = 2^bits levels.
+ * Uses a fixed deterministic sample set so the table depends only on (bits, sigma).
+ * For large dim, sigma is typically 1/sqrt(dim) (spherical / Gaussian marginal approximation).
+ */
+void
+ComputeGaussianScalarCodebook(uint32_t bits_per_dim, float sigma, std::vector<float>& centroids);
+
+}  // namespace vsag

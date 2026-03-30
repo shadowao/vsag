@@ -57,6 +57,15 @@ FhtKacRotator::Train() {
 }
 
 void
+FhtKacRotator::Train(uint64_t seed) {
+    std::mt19937_64 gen(seed);
+    std::uniform_int_distribution<int> dist(0, 255);
+    for (auto& i : flip_) {
+        i = static_cast<uint8_t>(dist(gen));
+    }
+}
+
+void
 FhtKacRotator::Train(const float* data, uint64_t count) {
     this->Train();
 }

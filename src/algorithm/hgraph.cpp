@@ -37,8 +37,10 @@
 #include "io/reader_io_parameter.h"
 #include "storage/serialization.h"
 #include "storage/stream_reader.h"
+#include "inner_string_params.h"
 #include "typing.h"
 #include "utils/util_functions.h"
+#include "vsag/constants.h"
 #include "utils/visited_list.h"
 #include "vsag/options.h"
 
@@ -401,6 +403,30 @@ HGraph::map_hgraph_param(const JsonType& hgraph_json) {
                 BASE_CODES_KEY,
                 QUANTIZATION_PARAMS_KEY,
                 USE_FHT_KEY,
+            },
+        },
+        {
+            TURBOQUANT_BITS_PER_DIM,
+            {
+                BASE_CODES_KEY,
+                QUANTIZATION_PARAMS_KEY,
+                TURBOQUANT_BITS_PER_DIM_KEY,
+            },
+        },
+        {
+            TURBOQUANT_ROTATION_SEED,
+            {
+                BASE_CODES_KEY,
+                QUANTIZATION_PARAMS_KEY,
+                TURBOQUANT_ROTATION_SEED_KEY,
+            },
+        },
+        {
+            TURBOQUANT_VARIANT,
+            {
+                BASE_CODES_KEY,
+                QUANTIZATION_PARAMS_KEY,
+                TURBOQUANT_VARIANT_KEY,
             },
         },
         {

@@ -139,6 +139,10 @@ const char* const RABITQ_BITS_PER_DIM_BASE = "rabitq_bits_per_dim_base";
 const char* const RABITQ_USE_FHT = "rabitq_use_fht";
 const char* const INDEX_TQ_CHAIN = "tq_chain";
 
+const char* const TURBOQUANT_BITS_PER_DIM = "turboquant_bits_per_dim";
+const char* const TURBOQUANT_ROTATION_SEED = "turboquant_rotation_seed";
+const char* const TURBOQUANT_VARIANT = "turboquant_variant";
+
 const char* const HGRAPH_SUPPORT_REMOVE = "support_remove";
 const char* const HGRAPH_REMOVE_FLAG_BIT = "remove_flag_bit";
 const char* const HGRAPH_USE_REORDER = USE_REORDER_KEY;

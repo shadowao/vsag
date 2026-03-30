@@ -70,6 +70,10 @@ public:
     static bool
     IsRaBitQ(const std::string& quantization_str);
 
+    /** RaBitQ / TurboQuant need a minimum dim for stable recall in functests. */
+    static bool
+    NeedsMinRecallDim(const std::string& quantization_str);
+
     static void
     TestGeneral(const IndexPtr& index,
                 const TestDatasetPtr& dataset,
@@ -107,6 +111,8 @@ const std::vector<std::pair<std::string, float>> HGraphTestIndex::all_test_cases
     {"rabitq,fp32,block_memory_io,32,2", 0.3},
     {"rabitq,fp32,block_memory_io,32,4", 0.3},
     {"rabitq,fp32,block_memory_io,32,8", 0.3},
+    {"turboquant,fp32,block_memory_io,4,12345", 0.3},
+    {"turboquant,fp32,block_memory_io,4,777", 0.3},
     {"pq,fp32", 0.95},
     {"sq4_uniform,fp32", 0.95},
     {"sq8_uniform,fp32", 0.98},
@@ -171,7 +177,10 @@ HGraphTestIndex::GenerateHGraphBuildParametersString(const HGraphBuildParam& par
             "graph_io_type": "{}",
             "graph_file_path": "{}",
             "rabitq_bits_per_dim_base": {},
-            "rabitq_bits_per_dim_query": {}
+            "rabitq_bits_per_dim_query": {},
+            "turboquant_bits_per_dim": {},
+            "turboquant_rotation_seed": {},
+            "turboquant_variant": "{}"
         }}
     }}
     )";
@@ -200,7 +209,10 @@ HGraphTestIndex::GenerateHGraphBuildParametersString(const HGraphBuildParam& par
             "graph_io_type": "{}",
             "graph_file_path": "{}",
             "rabitq_bits_per_dim_base": {},
-            "rabitq_bits_per_dim_query": {}
+            "rabitq_bits_per_dim_query": {},
+            "turboquant_bits_per_dim": {},
+            "turboquant_rotation_seed": {},
+            "turboquant_variant": "{}"
         }}
     }}
     )";
@@ -214,6 +226,9 @@ HGraphTestIndex::GenerateHGraphBuildParametersString(const HGraphBuildParam& par
     std::string high_quantizer_str, precise_io_type = "block_memory_io";
     auto& base_quantizer_str = strs[0];
     uint32_t rabitq_num_bit_query = 32, rabitq_num_bit_base = 1;
+    uint32_t turboquant_bits_per_dim = 4;
+    uint64_t turboquant_rotation_seed = 0;
+    std::string turboquant_variant = "mse";
     if (strs.size() > 1) {
         high_quantizer_str = strs[1];
         if (strs.size() > 2) {
@@ -222,6 +237,10 @@ HGraphTestIndex::GenerateHGraphBuildParametersString(const HGraphBuildParam& par
         if (strs.size() > 4 and base_quantizer_str == vsag::QUANTIZATION_TYPE_VALUE_RABITQ) {
             rabitq_num_bit_query = std::stoi(strs[3]);
             rabitq_num_bit_base = std::stoi(strs[4]);
+        }
+        if (strs.size() > 4 and base_quantizer_str == vsag::QUANTIZATION_TYPE_VALUE_TURBOQUANT) {
+            turboquant_bits_per_dim = static_cast<uint32_t>(std::stoul(strs[3]));
+            turboquant_rotation_seed = static_cast<uint64_t>(std::stoull(strs[4]));
         }
         build_parameters_str = fmt::format(parameter_temp_reorder,
                                            param.data_type,
@@ -244,7 +263,10 @@ HGraphTestIndex::GenerateHGraphBuildParametersString(const HGraphBuildParam& par
                                            param.graph_io_type,
                                            param.graph_file_path,
                                            rabitq_num_bit_base,
-                                           rabitq_num_bit_query);
+                                           rabitq_num_bit_query,
+                                           turboquant_bits_per_dim,
+                                           turboquant_rotation_seed,
+                                           turboquant_variant);
     } else {
         build_parameters_str = fmt::format(parameter_temp_origin,
                                            param.data_type,
@@ -263,7 +285,10 @@ HGraphTestIndex::GenerateHGraphBuildParametersString(const HGraphBuildParam& par
                                            param.graph_io_type,
                                            param.graph_file_path,
                                            param.rabitq_num_bit_base,
-                                           param.rabitq_num_bit_query);
+                                           param.rabitq_num_bit_query,
+                                           turboquant_bits_per_dim,
+                                           turboquant_rotation_seed,
+                                           turboquant_variant);
     }
     return build_parameters_str;
 }
@@ -271,6 +296,12 @@ HGraphTestIndex::GenerateHGraphBuildParametersString(const HGraphBuildParam& par
 bool
 HGraphTestIndex::IsRaBitQ(const std::string& quantization_str) {
     return (quantization_str.find(vsag::QUANTIZATION_TYPE_VALUE_RABITQ) != std::string::npos);
+}
+
+bool
+HGraphTestIndex::NeedsMinRecallDim(const std::string& quantization_str) {
+    return IsRaBitQ(quantization_str) ||
+           (quantization_str.find(vsag::QUANTIZATION_TYPE_VALUE_TURBOQUANT) != std::string::npos);
 }
 
 void
@@ -527,7 +558,7 @@ TestHGraphBuildAndContinueAdd(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -581,7 +612,7 @@ TestHGraphFactor(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -625,7 +656,7 @@ TestHGraphTrainAndAddTest(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -717,7 +748,7 @@ TestHGraphBuild(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -772,7 +803,7 @@ TestHGraphWithAttr(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -838,7 +869,7 @@ TestHGraphGetRawVector(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -917,7 +948,7 @@ TestHGraphTune(const fixtures::HGraphTestIndexPtr& test_index,
                                 dim,
                                 base_quantization_str1,
                                 base_quantization_str2));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str1) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str1) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     continue;  // Skip invalid RaBitQ configurations
                 }
@@ -1009,7 +1040,7 @@ TestHGraphODescentBuild(const fixtures::HGraphTestIndexPtr& test_index,
                                  base_quantization_str,
                                  recall));
 
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -1067,7 +1098,7 @@ TestHGraphRemove(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -1120,7 +1151,7 @@ TestHGraphCompressedBuild(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -1168,7 +1199,7 @@ TestHGraphMerge(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -1217,7 +1248,7 @@ TestHGraphAdd(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -1266,7 +1297,7 @@ TestHGraphNonstandardID(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -1323,7 +1354,7 @@ TestHGraphDuplicate(const fixtures::HGraphTestIndexPtr& test_index,
                                 base_quantization_str,
                                 recall,
                                 duplicate_pos));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -1386,7 +1417,7 @@ TestHGraphSearchWithDirtyVector(const fixtures::HGraphTestIndexPtr& test_index,
                              dim,
                              base_quantization_str,
                              recall));
-            if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+            if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                 dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                 continue;  // Skip invalid RaBitQ configurations
             }
@@ -1452,7 +1483,7 @@ TestHGraphConcurrentAdd(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -1508,7 +1539,7 @@ TestHGraphConcurrentAddSearchRemove(const fixtures::HGraphTestIndexPtr& test_ind
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -1562,7 +1593,7 @@ TestHGraphSerialize(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -1623,7 +1654,7 @@ TestHGraphReaderIO(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     (metric_type != "l2" || dim < fixtures::RABITQ_MIN_RACALL_DIM)) {
                     continue;  // Skip invalid RaBitQ configurations
                 }
@@ -1684,7 +1715,7 @@ TestHGraphClone(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -1737,7 +1768,7 @@ TestHGraphExportModel(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -1793,7 +1824,7 @@ TestHGraphRandomAllocator(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -1844,7 +1875,7 @@ TestHGraphDuplicateBuild(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -1894,7 +1925,7 @@ TestHGraphEstimateMemoryAndGetMemoryUsage(const fixtures::HGraphTestIndexPtr& te
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -2037,7 +2068,7 @@ TestHGraphWithExtraInfo(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -2103,7 +2134,7 @@ TestHGraphSearchOverTime(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
@@ -2157,7 +2188,7 @@ TestHGraphDiskIOType(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  memory_io_str,
                                  disk_io_str));
-                if (HGraphTestIndex::IsRaBitQ(memory_io_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(memory_io_str) &&
                     (dim < fixtures::RABITQ_MIN_RACALL_DIM)) {
                     continue;  // Skip invalid RaBitQ configurations
                 }
@@ -2365,7 +2396,7 @@ TestHGraphHopsLimit(const fixtures::HGraphTestIndexPtr& test_index,
                                  dim,
                                  base_quantization_str,
                                  recall));
-                if (HGraphTestIndex::IsRaBitQ(base_quantization_str) &&
+                if (HGraphTestIndex::NeedsMinRecallDim(base_quantization_str) &&
                     dim < fixtures::RABITQ_MIN_RACALL_DIM) {
                     dim = fixtures::RABITQ_MIN_RACALL_DIM;
                 }
