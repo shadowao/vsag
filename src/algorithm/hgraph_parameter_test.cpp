@@ -18,8 +18,9 @@
 #include <fmt/format.h>
 
 #include <catch2/catch_test_macros.hpp>
-
+#include "index_common_param.h"
 #include "parameter_test.h"
+#include "algorithm/hgraph.h"
 
 #define TEST_COMPATIBILITY_CASE(section_name, param_member, val1, val2, expect_compatible) \
     SECTION(section_name) {                                                                \
@@ -158,4 +159,31 @@ TEST_CASE("HGraph Parameters CheckCompatibility", "[ut][HGraphParameter][CheckCo
     TEST_COMPATIBILITY_CASE(
         "different use attribute filter", use_attribute_filter, true, false, false)
     TEST_COMPATIBILITY_CASE("different support duplicate", support_duplicate, true, false, false)
+}
+// clang-format on
+
+TEST_CASE("HGraph maps label_remap_type to inner index parameter", "[ut][HGraphParameter]") {
+    auto param = vsag::JsonType::Parse(R"({
+        "base_quantization_type": "fp32",
+        "base_io_type": "block_memory_io",
+        "precise_quantization_type": "fp32",
+        "precise_io_type": "block_memory_io",
+        "graph_io_type": "block_memory_io",
+        "graph_storage_type": "flat",
+        "graph_type": "nsw",
+        "max_degree": 32,
+        "ef_construction": 100,
+        "label_remap_type": "robin",
+        "use_reorder": true
+    })");
+
+    vsag::IndexCommonParam common_param;
+    common_param.dim_ = 128;
+    common_param.data_type_ = vsag::DataTypes::DATA_TYPE_FLOAT;
+    auto hgraph_param = vsag::HGraph::CheckAndMappingExternalParam(param, common_param);
+    auto typed_param = std::dynamic_pointer_cast<vsag::HGraphParameter>(hgraph_param);
+
+    REQUIRE(typed_param != nullptr);
+    REQUIRE(typed_param->bottom_graph_param != nullptr);
+    REQUIRE(typed_param->label_remap_type == vsag::LabelRemapType::ROBIN);
 }
