@@ -2100,6 +2100,7 @@ HGraph::SetImmutable() {
     this->neighbors_mutex_.reset();
     this->neighbors_mutex_ = std::make_shared<EmptyMutex>();
     this->searcher_->SetMutexArray(this->neighbors_mutex_);
+    this->parallel_searcher_->SetMutexArray(this->neighbors_mutex_);
     this->immutable_ = true;
 }
 
